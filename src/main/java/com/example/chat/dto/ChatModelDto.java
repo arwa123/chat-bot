@@ -37,7 +37,7 @@ public class ChatModelDto {
         long total
     ) {}
 
-    public record KnowledgeUpsertRequest(
+    public record DataIngestionRequest(
             String id,
             String source,
             String content,
@@ -45,17 +45,17 @@ public class ChatModelDto {
     ) {}
 
 
-    public record KnowledgeUpsertResponse(
+    public record DataIngestionResponse(
             UUID id,
             boolean success,
             String message
     ) {
-        public static KnowledgeUpsertResponse success(UUID id, String message) {
-            return new KnowledgeUpsertResponse(id, true, message);
+        public static DataIngestionResponse success(UUID id, String message) {
+            return new DataIngestionResponse(id, true, message);
         }
 
-        public static KnowledgeUpsertResponse error(String message) {
-            return new KnowledgeUpsertResponse(null, false, message);
+        public static DataIngestionResponse error(String message) {
+            return new DataIngestionResponse(null, false, message);
         }
     }
 

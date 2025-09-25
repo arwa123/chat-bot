@@ -3,6 +3,10 @@ server:
   tomcat:
     threads:
       max: 200
+    max-connections: 8192
+    connection-timeout: 20000
+    max-http-form-post-size: 100MB
+    max-swallow-size: 100MB
   ssl:
     trust-store: /Users/asaify/Documents/my-workspace/chat-bot/src/main/resources/truststore.jks
     trust-store-password: changeit
@@ -40,19 +44,31 @@ management:
 
 
 security:
-  api-keys: dev-key-123 # comma-separated raw keys for demo
+  api-keys: dev-key-123
   rate-limit-per-minute: 120
 
 rag:
   embedding:
-    provider: stub # stub|openai
-    model: text-embedding-3-small
+    provider:  # stub|openai
+    model:
+    batch-size: 5
+  chunking:
+    default-type: fixed-size
+    default-chunk-size: 800
+    default-overlap-size: 80
+    max-chunks-per-document: 5000
+  storage:
+    batch-size: 10
+  pipeline:
+    thread-pool-size: 4
+    max-document-size: 100MB
+    memory-optimization: true
   retrieval:
     top-k: 3
   generation:
     provider: anthropic # stub|openai|anthropic|gemini
     openai:
-      model: gpt-4o-mini
+      model: claude-3-7-sonnet-20250219
       api-key:
     anthropic:
       model: gpt-4o

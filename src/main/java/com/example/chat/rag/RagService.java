@@ -118,38 +118,31 @@ Context:
         }
     }
 
-    /**
-     * Insert or update a knowledge chunk with its vector embedding
-     * 
-     * @param id Unique identifier for the chunk
-     * @param source Source of the knowledge (e.g., document name, URL)
-     * @param content Text content of the chunk
-     * @param metadataJson Optional metadata as JSON string
-     */
     @Transactional
-    public void upsertKnowledgeChunk(UUID id, String source, String content, String metadataJson) {
+    public void insertDataChunk(UUID id, String source, String content, String metadataJson) {
         try {
-            logger.debug("Upserting knowledge chunk with ID: {}, source: {}", id, source);
-            
+            logger.debug("Inserted knowledge chunk with ID: {}, source: {}", id, source);
+
             // Generate embeddings for the content
             List<Double> vec = embeddingClient.getEmbeddings(content);
             String vectorLiteral = toVectorLiteral(vec);
-            
+
             // Insert or update the knowledge chunk with its embedding
             knowledgeRepository.upsertWithEmbedding(id, source, content, metadataJson, vectorLiteral);
-            
-            logger.info("Successfully upserted knowledge chunk with ID: {}", id);
+
+            logger.info("Successfully inserted knowledge chunk with ID: {}", id);
         } catch (DataIntegrityViolationException e) {
-            logger.error("Vector dimension mismatch while upserting knowledge chunk: {}", e.getMessage());
+            logger.error("Vector dimension mismatch while inserted knowledge chunk: {}", e.getMessage());
             throw new RuntimeException("Vector dimension mismatch between embedding client and database schema", e);
         } catch (DataAccessException e) {
-            logger.error("Database access error upserting knowledge chunk: {}", e.getMessage());
-            throw new RuntimeException("Database error upserting knowledge chunk", e);
+            logger.error("Database access error inserted knowledge chunk: {}", e.getMessage());
+            throw new RuntimeException("Database error inserted knowledge chunk", e);
         } catch (Exception e) {
-            logger.error("Error upserting knowledge chunk", e);
-            throw new RuntimeException("Error upserting knowledge chunk: " + e.getMessage(), e);
+            logger.error("Error inserted knowledge chunk", e);
+            throw new RuntimeException("Error inserted knowledge chunk: " + e.getMessage(), e);
         }
     }
+
 
     /**
      * Converts a list of doubles to a PostgreSQL vector literal string

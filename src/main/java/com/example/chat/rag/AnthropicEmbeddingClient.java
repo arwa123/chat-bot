@@ -207,42 +207,4 @@ public class AnthropicEmbeddingClient implements EmbeddingClient {
             throw new RuntimeException("Error calling embedding API: " + e.getMessage(), e);
         }
     }
-
-    /**
-     * Calculate cosine similarity between two embeddings
-     * 
-     * @param embedding1 First embedding vector
-     * @param embedding2 Second embedding vector
-     * @return Cosine similarity score (-1 to 1)
-     */
-    public double cosineSimilarity(List<Double> embedding1, List<Double> embedding2) {
-        if (embedding1 == null || embedding2 == null) {
-            throw new IllegalArgumentException("Embeddings cannot be null");
-        }
-        
-        if (embedding1.size() != embedding2.size()) {
-            throw new IllegalArgumentException("Embeddings must have the same dimension: " +
-                    embedding1.size() + " vs " + embedding2.size());
-        }
-
-        double dotProduct = 0.0;
-        double norm1 = 0.0;
-        double norm2 = 0.0;
-
-        for (int i = 0; i < embedding1.size(); i++) {
-            double val1 = embedding1.get(i);
-            double val2 = embedding2.get(i);
-            
-            dotProduct += val1 * val2;
-            norm1 += val1 * val1;
-            norm2 += val2 * val2;
-        }
-
-        double denominator = Math.sqrt(norm1) * Math.sqrt(norm2);
-        if (denominator == 0) {
-            return 0;
-        }
-
-        return dotProduct / denominator;
-    }
 }
