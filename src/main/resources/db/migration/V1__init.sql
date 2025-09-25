@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS knowledge_chunks (
     source TEXT,
     content TEXT NOT NULL,
     metadata JSONB,
-    embedding vector(384) -- dimension should match EMBEDDING_DIM
+    embedding vector(1024) -- dimension should match EMBEDDING_DIM
 );
 
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON chat_sessions(user_id, is_deleted);

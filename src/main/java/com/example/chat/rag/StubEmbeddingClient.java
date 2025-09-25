@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component("stubEmbeddingClient")
-@Primary
 public class StubEmbeddingClient implements EmbeddingClient {
     @Override
     public List<Double> getEmbeddings(String text) {

@@ -10,16 +10,16 @@ import reactor.netty.http.client.HttpClient;
 
 import javax.net.ssl.SSLException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Arrays;
 
 @Component
 @Primary
 public class AnthropicEmbeddingClient implements EmbeddingClient {
 
     private final WebClient webClient;
-    private static final int EMBEDDING_DIMENSION = 1024;
     private static final String EMBEDDING_URL = "/seldon/seldon/bge-m3-79ebf/v2/models/bge-m3-79ebf/infer";
 
     public AnthropicEmbeddingClient(@Value("${rag.generation.anthropic.api-key}") String apiKey) {
@@ -86,7 +86,23 @@ public class AnthropicEmbeddingClient implements EmbeddingClient {
                 if (!outputs.isEmpty()) {
                     Map<String, Object> output = outputs.get(0);
                     if (output.containsKey("data")) {
-                        List<List<Double>> embeddingData = (List<List<Double>>) output.get("data");
+                        Object data = output.get("data");
+                        List<List<Double>> embeddingData = new ArrayList<>();
+                        
+                        // Handle different possible formats of the data
+                        if (data instanceof List) {
+                            List<?> dataList = (List<?>) data;
+                            if (!dataList.isEmpty()) {
+                                if (dataList.get(0) instanceof List) {
+                                    // Format is already List<List<Double>>
+                                    embeddingData = (List<List<Double>>) data;
+                                } else if (dataList.get(0) instanceof Double) {
+                                    // Format is List<Double>, convert to List<List<Double>>
+                                    embeddingData.add((List<Double>) dataList);
+                                }
+                            }
+                        }
+                        
                         return embeddingData;
                     }
                 }
@@ -104,12 +120,6 @@ public class AnthropicEmbeddingClient implements EmbeddingClient {
         }
     }
 
-    /**
-     * Get the embedding dimension
-     */
-    public int getDimension() {
-        return EMBEDDING_DIMENSION;
-    }
 
     /**
      * Calculate cosine similarity between two embeddings
