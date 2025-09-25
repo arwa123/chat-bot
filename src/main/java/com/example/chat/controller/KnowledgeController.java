@@ -1,11 +1,11 @@
 package com.example.chat.controller;
 
-import com.example.chat.dto.EmbeddingDto.KnowledgeUpsertRequest;
-import com.example.chat.dto.EmbeddingDto.KnowledgeUpsertResponse;
-import com.example.chat.dto.EmbeddingDto.KnowledgeRetrievalRequest;
-import com.example.chat.dto.EmbeddingDto.KnowledgeRetrievalResponse;
-import com.example.chat.dto.LlmDto.GenerationRequest;
-import com.example.chat.dto.LlmDto.GenerationResponse;
+import com.example.chat.dto.ChatModelDto.KnowledgeUpsertRequest;
+import com.example.chat.dto.ChatModelDto.KnowledgeUpsertResponse;
+import com.example.chat.dto.ChatModelDto.KnowledgeRetrievalRequest;
+import com.example.chat.dto.ChatModelDto.KnowledgeRetrievalResponse;
+import com.example.chat.dto.LLMDto.GenerationRequest;
+import com.example.chat.dto.LLMDto.GenerationResponse;
 import com.example.chat.service.KnowledgeService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;

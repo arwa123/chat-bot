@@ -1,5 +1,12 @@
 package com.example.chat.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.util.StdConverter;
+
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -9,59 +16,122 @@ import java.util.UUID;
  */
 public class EmbeddingDto {
 
-    /**
-     * Request to upsert a knowledge chunk
-     */
-    public record KnowledgeUpsertRequest(
-        String id, // Optional UUID; if omitted server will create
-        String source,
-        String content,
-        Object metadata
+    public record EmbeddingTensorInput(
+            String name,
+            List<Integer> shape,
+            String datatype,
+            List<String> data
     ) {}
 
-    /**
-     * Response after upserting a knowledge chunk
-     */
-    public record KnowledgeUpsertResponse(
-        UUID id,
-        boolean success,
-        String message
+    public record EmbeddingRequest(
+            List<EmbeddingTensorInput> inputs
     ) {
-        // Static factory methods to replace builders
-        public static KnowledgeUpsertResponse success(UUID id, String message) {
-            return new KnowledgeUpsertResponse(id, true, message);
+        public static EmbeddingRequest forSingleText(String text) {
+            return new EmbeddingRequest(List.of(
+                    new EmbeddingTensorInput(
+                            "input",
+                            List.of(1),
+                            "BYTES",
+                            List.of(text)
+                    )
+            ));
         }
-        
-        public static KnowledgeUpsertResponse error(String message) {
-            return new KnowledgeUpsertResponse(null, false, message);
+
+        public static EmbeddingRequest forMultipleTexts(List<String> texts) {
+            return new EmbeddingRequest(List.of(
+                    new EmbeddingTensorInput(
+                            "input",
+                            List.of(texts.size()),
+                            "BYTES",
+                            texts
+                    )
+            ));
         }
     }
 
     /**
-     * Request to retrieve knowledge chunks based on a query
+     * Converter to handle JSON deserialization for embedding data that might be nested differently
      */
-    public record KnowledgeRetrievalRequest(
-        String query,
-        int limit
-    ) {}
+    public static class EmbeddingDataConverter extends StdConverter<Object, List<List<Double>>> {
+        @Override
+        public List<List<Double>> convert(Object value) {
+            if (value == null) {
+                return Collections.emptyList();
+            }
+            
+            if (value instanceof List<?>) {
+                List<?> list = (List<?>) value;
+                if (list.isEmpty()) {
+                    return Collections.emptyList();
+                }
+                
+                if (list.get(0) instanceof List) {
+                    return (List<List<Double>>) value;
+                }
+                
+                if (list.get(0) instanceof Number) {
+                    List<Double> doubles = new ArrayList<>();
+                    for (Object obj : list) {
+                        if (obj instanceof Number) {
+                            doubles.add(((Number) obj).doubleValue());
+                        }
+                    }
+                    return Collections.singletonList(doubles);
+                }
+            }
+            
+            if (value instanceof Number) {
+                List<Double> singleValue = Collections.singletonList(((Number) value).doubleValue());
+                return Collections.singletonList(singleValue);
+            }
+            
+            return Collections.emptyList();
+        }
+    }
 
-    /**
-     * Represents a retrieved knowledge chunk with similarity score
-     */
-    public record RetrievedKnowledge(
-        UUID id,
-        String content,
-        String source,
-        String metadataJson,
-        double score
-    ) {}
+    public record EmbeddingTensorOutput(
+            String name,
+            List<Integer> shape,
+            String datatype,
+            @JsonDeserialize(converter = EmbeddingDataConverter.class)
+            Object data
+    ) {
 
-    /**
-     * Response containing retrieved knowledge chunks
-     */
-    public record KnowledgeRetrievalResponse(
-        List<RetrievedKnowledge> results,
-        String query,
-        int limit
+        public List<List<Double>> getEmbeddingData() {
+            if (data instanceof List) {
+                return (List<List<Double>>) data;
+            }
+            return Collections.emptyList();
+        }
+    }
+
+    public record EmbeddingResponse(
+            String model_name,
+            String model_version,
+            List<EmbeddingTensorOutput> outputs
+    ) {
+        public List<List<Double>> getEmbeddings() {
+            if (outputs == null || outputs.isEmpty() || outputs.get(0) == null) {
+                return Collections.emptyList();
+            }
+
+            EmbeddingTensorOutput output = outputs.get(0);
+            return output.getEmbeddingData();
+        }
+
+        public List<Double> getFirstEmbedding() {
+            List<List<Double>> embeddings = getEmbeddings();
+            if (embeddings == null || embeddings.isEmpty()) {
+                return Collections.emptyList();
+            }
+            return embeddings.get(0);
+        }
+    }
+
+    public record EmbeddingError(
+            String error,
+            @JsonProperty("error_type")
+            String errorType,
+            String message
     ) {}
 }

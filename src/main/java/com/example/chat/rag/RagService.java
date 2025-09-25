@@ -1,47 +1,38 @@
 package com.example.chat.rag;
 
-import com.example.chat.dto.EmbeddingDto.RetrievedKnowledge;
+import com.example.chat.dto.ChatModelDto.RetrievedKnowledge;
 import com.example.chat.llm.LlmClient;
+import com.example.chat.model.KnowledgeChunkWithDistance;
+import com.example.chat.repository.KnowledgeChunkRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Service for Retrieval Augmented Generation (RAG)
+ * Handles vector search and LLM generation with context
+ */
 @Service
 @RequiredArgsConstructor
 public class RagService {
     
     private static final Logger logger = LoggerFactory.getLogger(RagService.class);
 
-    private final JdbcTemplate jdbcTemplate;
+    private final KnowledgeChunkRepository knowledgeRepository;
     private final EmbeddingClient embeddingClient;
     private final LlmClient llmClient;
 
-
-
     @Value("${rag.retrieval.top-k:3}")
     private int topK;
-
-    /**
-     * @deprecated Use {@link com.example.chat.dto.EmbeddingDto.RetrievedKnowledge} instead
-     */
-    @Deprecated
-    public static class Retrieved {
-        public UUID id;
-        public String content;
-        public String source;
-        public String metadataJson;
-        public double score;
-    }
 
     /**
      * Retrieve knowledge chunks based on semantic similarity to the query
@@ -54,44 +45,40 @@ public class RagService {
     }
     
     /**
-     * Retrieve knowledge chunks based on semantic similarity to the query
+     * Retrieve knowledge chunks using vector similarity search
      * 
-     * @param query Text query to find similar chunks for
+     * @param query The text query to find similar chunks for
      * @param limit Maximum number of results to return
      * @return List of retrieved knowledge chunks with similarity scores
      */
+    @Transactional(readOnly = true)
     public List<RetrievedKnowledge> retrieve(String query, int limit) {
         try {
             logger.debug("Retrieving knowledge chunks for query: {}", query);
             
+            // Generate embeddings for the query
             List<Double> vec = embeddingClient.getEmbeddings(query);
             String vectorLiteral = toVectorLiteral(vec);
-            
-            String sql = """
-                SELECT id, content, source, metadata, (embedding <=> ?::vector) AS distance
-                FROM knowledge_chunks
-                ORDER BY embedding <=> ?::vector
-                LIMIT ?
-            """;
-            
-            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, vectorLiteral, vectorLiteral, topK);
-            logger.debug("Retrieved {} results from knowledge base", rows.size());
-            
-            List<RetrievedKnowledge> out = new ArrayList<>();
-            for (Map<String, Object> r : rows) {
-                RetrievedKnowledge ret = new RetrievedKnowledge(
-                    (UUID) r.get("id"),
-                    (String) r.get("content"),
-                    (String) r.get("source"),
-                    r.get("metadata") != null ? r.get("metadata").toString() : null,
-                    ((Number) r.get("distance")).doubleValue()
-                );
-                out.add(ret);
-            }
-            return out;
+
+            List<KnowledgeChunkWithDistance> results = knowledgeRepository.findSimilarByVector(vectorLiteral, limit);
+            logger.debug("Retrieved {} results from knowledge base", results.size());
+
+            return results.stream()
+                .map(chunk -> new RetrievedKnowledge(
+                    chunk.getId(),
+                    chunk.getContent(),
+                    chunk.getSource(),
+                    chunk.getMetadata(),
+                    chunk.getDistance()
+                ))
+                .collect(Collectors.toList());
+                
         } catch (DataIntegrityViolationException e) {
             logger.error("Vector dimension mismatch: {}", e.getMessage());
             throw new RuntimeException("Vector dimension mismatch between embedding client and database schema", e);
+        } catch (DataAccessException e) {
+            logger.error("Database access error retrieving knowledge chunks: {}", e.getMessage());
+            throw new RuntimeException("Database error retrieving knowledge chunks", e);
         } catch (Exception e) {
             logger.error("Error retrieving knowledge chunks", e);
             throw new RuntimeException("Error retrieving knowledge chunks: " + e.getMessage(), e);
@@ -131,37 +118,51 @@ Context:
         }
     }
 
+    /**
+     * Insert or update a knowledge chunk with its vector embedding
+     * 
+     * @param id Unique identifier for the chunk
+     * @param source Source of the knowledge (e.g., document name, URL)
+     * @param content Text content of the chunk
+     * @param metadataJson Optional metadata as JSON string
+     */
+    @Transactional
     public void upsertKnowledgeChunk(UUID id, String source, String content, String metadataJson) {
         try {
             logger.debug("Upserting knowledge chunk with ID: {}, source: {}", id, source);
             
+            // Generate embeddings for the content
             List<Double> vec = embeddingClient.getEmbeddings(content);
             String vectorLiteral = toVectorLiteral(vec);
             
-            String sql = """
-                INSERT INTO knowledge_chunks(id, source, content, metadata, embedding)
-                VALUES (?, ?, ?, CAST(? AS jsonb), ?::vector)
-                ON CONFLICT (id) DO UPDATE SET
-                    source = EXCLUDED.source,
-                    content = EXCLUDED.content,
-                    metadata = EXCLUDED.metadata,
-                    embedding = EXCLUDED.embedding
-            """;
+            // Insert or update the knowledge chunk with its embedding
+            knowledgeRepository.upsertWithEmbedding(id, source, content, metadataJson, vectorLiteral);
             
-            jdbcTemplate.update(sql, id, source, content, metadataJson, vectorLiteral);
             logger.info("Successfully upserted knowledge chunk with ID: {}", id);
         } catch (DataIntegrityViolationException e) {
             logger.error("Vector dimension mismatch while upserting knowledge chunk: {}", e.getMessage());
             throw new RuntimeException("Vector dimension mismatch between embedding client and database schema", e);
+        } catch (DataAccessException e) {
+            logger.error("Database access error upserting knowledge chunk: {}", e.getMessage());
+            throw new RuntimeException("Database error upserting knowledge chunk", e);
         } catch (Exception e) {
             logger.error("Error upserting knowledge chunk", e);
             throw new RuntimeException("Error upserting knowledge chunk: " + e.getMessage(), e);
         }
     }
 
+    /**
+     * Converts a list of doubles to a PostgreSQL vector literal string
+     * 
+     * @param vec List of vector components
+     * @return String in PostgreSQL vector format [x,y,z,...]
+     */
     private String toVectorLiteral(List<Double> vec) {
         try {
-            return "[" + vec.stream().map(d -> String.format(java.util.Locale.US, "%.6f", d)).collect(Collectors.joining(",")) + "]";
+            // Convert to PostgreSQL vector literal format
+            return "[" + vec.stream()
+                .map(d -> String.format(java.util.Locale.US, "%.6f", d))
+                .collect(Collectors.joining(",")) + "]";
         } catch (Exception e) {
             logger.error("Error creating vector literal", e);
             throw new RuntimeException("Error creating vector literal: " + e.getMessage(), e);

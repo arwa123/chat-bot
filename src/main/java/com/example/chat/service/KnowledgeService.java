@@ -1,10 +1,10 @@
 package com.example.chat.service;
 
-import com.example.chat.dto.EmbeddingDto.KnowledgeUpsertRequest;
-import com.example.chat.dto.EmbeddingDto.KnowledgeUpsertResponse;
-import com.example.chat.dto.EmbeddingDto.RetrievedKnowledge;
-import com.example.chat.dto.LlmDto.GenerationRequest;
-import com.example.chat.dto.LlmDto.GenerationResponse;
+import com.example.chat.dto.ChatModelDto.KnowledgeUpsertRequest;
+import com.example.chat.dto.ChatModelDto.KnowledgeUpsertResponse;
+import com.example.chat.dto.ChatModelDto.RetrievedKnowledge;
+import com.example.chat.dto.LLMDto.GenerationRequest;
+import com.example.chat.dto.LLMDto.GenerationResponse;
 import com.example.chat.llm.LlmClient;
 import com.example.chat.rag.RagService;
 import lombok.RequiredArgsConstructor;

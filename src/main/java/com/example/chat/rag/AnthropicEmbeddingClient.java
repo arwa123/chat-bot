@@ -1,132 +1,204 @@
 package com.example.chat.rag;
 
+import com.example.chat.dto.EmbeddingDto.EmbeddingRequest;
+import com.example.chat.dto.EmbeddingDto.EmbeddingResponse;
+import com.example.chat.dto.EmbeddingDto.EmbeddingError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
-
+import reactor.util.retry.Retry;
 import javax.net.ssl.SSLException;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
+/**
+ * Client for generating embeddings using Anthropic's API
+ */
 @Component
 @Primary
 public class AnthropicEmbeddingClient implements EmbeddingClient {
 
     private static final Logger logger = LoggerFactory.getLogger(AnthropicEmbeddingClient.class);
-    
-    @Value("${rag.embedding.dimension}")
-    private int embeddingDimension;
+    private static final String EMBEDDING_ENDPOINT = "/seldon/seldon/bge-m3-79ebf/v2/models/bge-m3-79ebf/infer";
+    private static final int EMBEDDING_DIMENSION = 1024;
+    private static final int REQUEST_TIMEOUT_SECONDS = 30;
+    private static final int RETRY_MAX_ATTEMPTS = 2;
+    private static final int RETRY_MIN_BACKOFF_SECONDS = 1;
 
     private final WebClient webClient;
     private final String baseUrl;
-    private static final String EMBEDDING_URL = "/seldon/seldon/bge-m3-79ebf/v2/models/bge-m3-79ebf/infer";
 
+    /**
+     * Creates a new Anthropic embedding client
+     * 
+     * @param apiKey API key for authentication
+     * @param baseUrl Base URL for the embedding API
+     */
     public AnthropicEmbeddingClient(
             @Value("${rag.generation.anthropic.api-key}") String apiKey,
             @Value("${rag.generation.anthropic.base-url}") String baseUrl) {
         
         this.baseUrl = baseUrl;
-        // Disable SSL verification for dev environment
-        HttpClient httpClient = HttpClient.create()
-                .responseTimeout(Duration.ofSeconds(30))
-                .secure(sslContextSpec ->
-                        {
-                            try {
-                                sslContextSpec.sslContext(
-                                        io.netty.handler.ssl.SslContextBuilder.forClient()
-                                                .trustManager(io.netty.handler.ssl.util.InsecureTrustManagerFactory.INSTANCE)
-                                                .build()
-                                );
-                            } catch (SSLException e) {
-                                throw new RuntimeException(e);
-                            }
-                        }
-                );
+        logger.info("Initializing Anthropic embedding client with base URL: {}", baseUrl);
+
+        HttpClient httpClient = configureHttpClient();
 
         this.webClient = WebClient.builder()
                 .baseUrl(this.baseUrl)
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .defaultHeader("Authorization", "Bearer " + apiKey)
-                .defaultHeader("Content-Type", "application/json")
+                .defaultHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                .defaultHeader("Accept", MediaType.APPLICATION_JSON_VALUE)
                 .build();
+        
+        logger.debug("Anthropic embedding client initialized successfully");
+    }
+
+
+    private HttpClient configureHttpClient() {
+        return HttpClient.create()
+                .responseTimeout(Duration.ofSeconds(REQUEST_TIMEOUT_SECONDS))
+                .secure(sslContextSpec -> {
+                    try {
+                        sslContextSpec.sslContext(
+                                io.netty.handler.ssl.SslContextBuilder.forClient()
+                                        .trustManager(io.netty.handler.ssl.util.InsecureTrustManagerFactory.INSTANCE)
+                                        .build()
+                        );
+                    } catch (SSLException e) {
+                        logger.error("Error configuring SSL context", e);
+                        throw new RuntimeException("Error configuring SSL context", e);
+                    }
+                });
     }
 
     /**
      * Generate embeddings for a single text
+     * 
+     * @param text Text to embed
+     * @return Vector representation as a list of doubles
      */
     @Override
     public List<Double> getEmbeddings(String text) {
-        return getEmbeddings(Arrays.asList(text)).get(0);
-    }
+        if (text == null || text.isBlank()) {
+            logger.warn("Empty text provided for embedding");
+            throw new IllegalArgumentException("Text cannot be empty");
+        }
+        
+        logger.debug("Generating embedding for text of length: {}", text.length());
+        
+        try {
+            EmbeddingRequest request = EmbeddingRequest.forSingleText(text);
+            List<List<Double>> embeddings = getEmbeddingsInternal(request);
 
+            if (embeddings.isEmpty()) {
+                throw new RuntimeException("No embeddings returned from API");
+            }
+            
+            return embeddings.get(0);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate embedding for text", e);
+        }
+    }
+    
     /**
      * Generate embeddings for multiple texts
+     * 
+     * @param texts List of texts to embed
+     * @return List of embedding vectors
      */
-    public List<List<Double>> getEmbeddings(List<String> texts) {
+    public List<List<Double>> getEmbeddingsForMultipleTexts(List<String> texts) {
+        if (texts == null || texts.isEmpty()) {
+            logger.warn("Empty text list provided for embeddings");
+            return Collections.emptyList();
+        }
+        
         logger.debug("Generating embeddings for {} texts", texts.size());
+        
         try {
-            // Create payload matching the Python format
-            Map<String, Object> payload = Map.of(
-                    "inputs", List.of(
-                            Map.of(
-                                    "name", "input",
-                                    "shape", List.of(texts.size()),
-                                    "datatype", "BYTES",
-                                    "data", texts
-                            )
-                    )
-            );
+            // Create request using factory method
+            EmbeddingRequest request = EmbeddingRequest.forMultipleTexts(texts);
+            
+            // Get embeddings
+            return getEmbeddingsInternal(request);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate embeddings for texts", e);
+        }
+    }
+    
+    /**
+     * Internal method to get embeddings from the API
+     * 
+     * @param request The embedding request
+     * @return List of embedding vectors
+     */
+    private List<List<Double>> getEmbeddingsInternal(EmbeddingRequest request) {
+        try {
 
-            Map<String, Object> response = webClient.post()
-                    .uri(EMBEDDING_URL)
-                    .bodyValue(payload)
+            EmbeddingResponse response = webClient.post()
+                    .uri(EMBEDDING_ENDPOINT)
+                    .bodyValue(request)
                     .retrieve()
-                    .bodyToMono(Map.class)
+                    .onStatus(
+                        statusCode -> statusCode.is4xxClientError() || statusCode.is5xxServerError(),
+                        clientResponse -> clientResponse.bodyToMono(EmbeddingError.class)
+                            .flatMap(error -> {
+                                String errorMsg = error != null ? error.message() : "Unknown error";
+                                return Mono.<Throwable>error(new ResponseStatusException(
+                                    clientResponse.statusCode(),
+                                    "API error: " + errorMsg
+                                ));
+                            })
+                    )
+                    .bodyToMono(EmbeddingResponse.class)
+                    .retryWhen(Retry.backoff(RETRY_MAX_ATTEMPTS, Duration.ofSeconds(RETRY_MIN_BACKOFF_SECONDS))
+                            .filter(throwable -> !(throwable instanceof TimeoutException))
+                    )
                     .block();
 
-            // Parse response
-            if (response != null && response.containsKey("outputs")) {
-                List<Map<String, Object>> outputs = (List<Map<String, Object>>) response.get("outputs");
-                if (!outputs.isEmpty()) {
-                    Map<String, Object> output = outputs.get(0);
-                    if (output.containsKey("data")) {
-                        Object data = output.get("data");
-                        List<List<Double>> embeddingData = new ArrayList<>();
-                        
-                        // Handle different possible formats of the data
-                        if (data instanceof List) {
-                            List<?> dataList = (List<?>) data;
-                            if (!dataList.isEmpty()) {
-                                if (dataList.get(0) instanceof List) {
-                                    // Format is already List<List<Double>>
-                                    embeddingData = (List<List<Double>>) data;
-                                } else if (dataList.get(0) instanceof Double) {
-                                    // Format is List<Double>, convert to List<List<Double>>
-                                    embeddingData.add((List<Double>) dataList);
-                                }
-                            }
-                        }
-                        
-                        return embeddingData;
-                    }
+            if (response == null) {
+                logger.error("Null response from embedding API");
+                throw new RuntimeException("Null response received from embedding API");
+            }
+            
+            List<List<Double>> embeddings = response.getEmbeddings();
+            if (embeddings == null) {
+                logger.error("No embeddings returned from API");
+                throw new RuntimeException("No embeddings returned from API");
+            }
+            
+            if (embeddings.isEmpty()) {
+                logger.warn("Empty embeddings list returned from API, returning empty list");
+                return Collections.emptyList();
+            }
+            
+            for (List<Double> embedding : embeddings) {
+                if (embedding.size() != EMBEDDING_DIMENSION) {
+                    logger.error("Unexpected embedding dimension: got {}, expected {}", 
+                            embedding.size(), EMBEDDING_DIMENSION);
+                    throw new IllegalStateException(
+                            "Unexpected embedding dimension: got " + embedding.size() + 
+                            ", expected " + EMBEDDING_DIMENSION);
                 }
             }
-
-            logger.error("Unexpected response format from embedding API");
-            throw new RuntimeException("Unexpected response format from embedding API");
-
+            
+            logger.debug("Successfully generated {} embeddings", embeddings.size());
+            return embeddings;
+            
         } catch (WebClientResponseException e) {
             String responseBody = e.getResponseBodyAsString();
-            logger.error("Embedding API error: {} - Response: {} (Status: {})", 
+            logger.error("Embedding API error: {} - Response: {} (Status: {})",
                     e.getMessage(), responseBody, e.getStatusCode());
             throw new RuntimeException("Embedding API error: " + e.getMessage() +
                     " Response: " + responseBody + " (Status: " + e.getStatusCode() + ")", e);
@@ -136,13 +208,21 @@ public class AnthropicEmbeddingClient implements EmbeddingClient {
         }
     }
 
-
     /**
      * Calculate cosine similarity between two embeddings
+     * 
+     * @param embedding1 First embedding vector
+     * @param embedding2 Second embedding vector
+     * @return Cosine similarity score (-1 to 1)
      */
     public double cosineSimilarity(List<Double> embedding1, List<Double> embedding2) {
+        if (embedding1 == null || embedding2 == null) {
+            throw new IllegalArgumentException("Embeddings cannot be null");
+        }
+        
         if (embedding1.size() != embedding2.size()) {
-            throw new IllegalArgumentException("Embeddings must have the same dimension");
+            throw new IllegalArgumentException("Embeddings must have the same dimension: " +
+                    embedding1.size() + " vs " + embedding2.size());
         }
 
         double dotProduct = 0.0;
@@ -150,11 +230,19 @@ public class AnthropicEmbeddingClient implements EmbeddingClient {
         double norm2 = 0.0;
 
         for (int i = 0; i < embedding1.size(); i++) {
-            dotProduct += embedding1.get(i) * embedding2.get(i);
-            norm1 += embedding1.get(i) * embedding1.get(i);
-            norm2 += embedding2.get(i) * embedding2.get(i);
+            double val1 = embedding1.get(i);
+            double val2 = embedding2.get(i);
+            
+            dotProduct += val1 * val2;
+            norm1 += val1 * val1;
+            norm2 += val2 * val2;
         }
 
-        return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
+        double denominator = Math.sqrt(norm1) * Math.sqrt(norm2);
+        if (denominator == 0) {
+            return 0;
+        }
+
+        return dotProduct / denominator;
     }
 }
