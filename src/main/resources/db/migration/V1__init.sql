@@ -20,9 +20,9 @@ END $$;
 CREATE TABLE IF NOT EXISTS chat_messages (
     id UUID PRIMARY KEY,
     session_id UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
-    sender sender NOT NULL,
+    sender TEXT NOT NULL,
     content TEXT NOT NULL,
-    context JSONB,
+    context TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 

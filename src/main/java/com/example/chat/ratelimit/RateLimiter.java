@@ -18,20 +18,7 @@ public class RateLimiter {
         this.defaultMaxRequestsPerMinute = defaultMaxRequestsPerMinute;
     }
     
-    /**
-     * Set a custom rate limit for a specific API key
-     * 
-     * @param apiKey The API key to set the limit for
-     * @param requestsPerMinute The maximum number of requests per minute for this key
-     */
-    public void setCustomRateLimit(String apiKey, int requestsPerMinute) {
-        if (requestsPerMinute > 0) {
-            customLimits.put(apiKey, requestsPerMinute);
-        } else {
-            customLimits.remove(apiKey);
-        }
-    }
-    
+
     /**
      * Get the rate limit for a specific API key
      * 

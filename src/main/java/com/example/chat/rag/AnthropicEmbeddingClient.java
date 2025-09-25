@@ -1,5 +1,7 @@
 package com.example.chat.rag;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
@@ -19,10 +21,20 @@ import java.util.Map;
 @Primary
 public class AnthropicEmbeddingClient implements EmbeddingClient {
 
+    private static final Logger logger = LoggerFactory.getLogger(AnthropicEmbeddingClient.class);
+    
+    @Value("${rag.embedding.dimension}")
+    private int embeddingDimension;
+
     private final WebClient webClient;
+    private final String baseUrl;
     private static final String EMBEDDING_URL = "/seldon/seldon/bge-m3-79ebf/v2/models/bge-m3-79ebf/infer";
 
-    public AnthropicEmbeddingClient(@Value("${rag.generation.anthropic.api-key}") String apiKey) {
+    public AnthropicEmbeddingClient(
+            @Value("${rag.generation.anthropic.api-key}") String apiKey,
+            @Value("${rag.generation.anthropic.base-url}") String baseUrl) {
+        
+        this.baseUrl = baseUrl;
         // Disable SSL verification for dev environment
         HttpClient httpClient = HttpClient.create()
                 .responseTimeout(Duration.ofSeconds(30))
@@ -41,7 +53,7 @@ public class AnthropicEmbeddingClient implements EmbeddingClient {
                 );
 
         this.webClient = WebClient.builder()
-                .baseUrl("https://aiplatform.dev51.cbf.dev.paypalinc.com")
+                .baseUrl(this.baseUrl)
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .defaultHeader("Authorization", "Bearer " + apiKey)
                 .defaultHeader("Content-Type", "application/json")
@@ -60,6 +72,7 @@ public class AnthropicEmbeddingClient implements EmbeddingClient {
      * Generate embeddings for multiple texts
      */
     public List<List<Double>> getEmbeddings(List<String> texts) {
+        logger.debug("Generating embeddings for {} texts", texts.size());
         try {
             // Create payload matching the Python format
             Map<String, Object> payload = Map.of(
@@ -108,15 +121,18 @@ public class AnthropicEmbeddingClient implements EmbeddingClient {
                 }
             }
 
-            throw new RuntimeException("Unexpected response format from PayPal Embedding API");
+            logger.error("Unexpected response format from embedding API");
+            throw new RuntimeException("Unexpected response format from embedding API");
 
         } catch (WebClientResponseException e) {
             String responseBody = e.getResponseBodyAsString();
-            System.err.println("PayPal Embedding API Error Response: " + responseBody);
-            throw new RuntimeException("PayPal Embedding API error: " + e.getMessage() +
+            logger.error("Embedding API error: {} - Response: {} (Status: {})", 
+                    e.getMessage(), responseBody, e.getStatusCode());
+            throw new RuntimeException("Embedding API error: " + e.getMessage() +
                     " Response: " + responseBody + " (Status: " + e.getStatusCode() + ")", e);
         } catch (Exception e) {
-            throw new RuntimeException("Error calling PayPal Embedding API: " + e.getMessage(), e);
+            logger.error("Error calling embedding API", e);
+            throw new RuntimeException("Error calling embedding API: " + e.getMessage(), e);
         }
     }
 
