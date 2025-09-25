@@ -40,26 +40,40 @@ management:
 
 
 security:
-  api-keys: ${API_KEYS:dev-key-123} # comma-separated raw keys for demo
-  rate-limit-per-minute: ${RATE_LIMIT_PER_MIN:120}
+  api-keys: dev-key-123 # comma-separated raw keys for demo
+  rate-limit-per-minute: 120
 
 rag:
   embedding:
-    provider: ${EMBEDDING_PROVIDER:stub} # stub|openai
-    model: ${EMBEDDING_MODEL:text-embedding-3-small}
-    openai-api-key: ${OPENAI_API_KEY:}
-    dimension: ${EMBEDDING_DIM:384}
+    provider: stub # stub|openai
+    model: text-embedding-3-small
+    openai-api-key:
+    dimension: 384
   retrieval:
-    top-k: ${RETRIEVAL_TOP_K:3}
+    top-k: 3
   generation:
-    provider: ${LLM_PROVIDER:anthropic} # stub|openai|anthropic|gemini
+    provider: anthropic # stub|openai|anthropic|gemini
     openai:
-      model: ${OPENAI_MODEL:gpt-4o-mini}
-      api-key: ${OPENAI_API_KEY:}
+      model: gpt-4o-mini
+      api-key:
     anthropic:
-      model: ${ANTHROPIC_MODEL:claude-3-5-sonnet-20240620}
-      api-key: ${ANTHROPIC_API_KEY:}
-      base-url:
+      model: gpt-4o
+      api-key:
+      base-url: 
     gemini:
-      model: ${GEMINI_MODEL:gemini-1.5-pro}
-      api-key: ${GEMINI_API_KEY:}
+      model: gemini-1.5-pro
+      api-key: AIzaSyBnA91rE0yGrBTysGl_di-tgXiizzvQg3U
+
+#  gemini-2.0-flash-lite
+#  gemini-2.0-flash
+#  gemini-2.5-pro-preview-03-25
+#  gpt-4.1
+#  gpt-4o-mini
+#  gpt-4o
+#  claude-3-7-sonnet-20250219
+#  claude-3-5-haiku-20241022
+#  llama33-70b
+#  llama31-8b
+#  deepseek-r1-distill-llama-70b
+#  deepseek-r1-distill-qwen-32b
+#  qwen25-coder-32b
