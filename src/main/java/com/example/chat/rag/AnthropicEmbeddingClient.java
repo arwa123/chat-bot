@@ -39,12 +39,7 @@ public class AnthropicEmbeddingClient implements EmbeddingClient {
     private final WebClient webClient;
     private final String baseUrl;
 
-    /**
-     * Creates a new Anthropic embedding client
-     * 
-     * @param apiKey API key for authentication
-     * @param baseUrl Base URL for the embedding API
-     */
+
     public AnthropicEmbeddingClient(
             @Value("${rag.embedding.api-key}") String apiKey,
             @Value("${rag.embedding.base-url}") String baseUrl) {
@@ -83,12 +78,7 @@ public class AnthropicEmbeddingClient implements EmbeddingClient {
                 });
     }
 
-    /**
-     * Generate embeddings for a single text
-     * 
-     * @param text Text to embed
-     * @return Vector representation as a list of doubles
-     */
+
     @Override
     public List<Double> getEmbeddings(String text) {
         if (text == null || text.isBlank()) {
@@ -112,12 +102,7 @@ public class AnthropicEmbeddingClient implements EmbeddingClient {
         }
     }
     
-    /**
-     * Generate embeddings for multiple texts
-     * 
-     * @param texts List of texts to embed
-     * @return List of embedding vectors
-     */
+
     public List<List<Double>> getEmbeddingsForMultipleTexts(List<String> texts) {
         if (texts == null || texts.isEmpty()) {
             logger.warn("Empty text list provided for embeddings");
@@ -137,12 +122,7 @@ public class AnthropicEmbeddingClient implements EmbeddingClient {
         }
     }
     
-    /**
-     * Internal method to get embeddings from the API
-     * 
-     * @param request The embedding request
-     * @return List of embedding vectors
-     */
+
     private List<List<Double>> getEmbeddingsInternal(EmbeddingRequest request) {
         try {
 

@@ -19,13 +19,6 @@ public interface KnowledgeChunkRepository extends JpaRepository<KnowledgeChunk, 
             @Param("limit") int limit);
     
 
-    @Query(nativeQuery = true, name = "KnowledgeChunk.findSimilarByVectorWithOperation")
-    List<KnowledgeChunkWithDistance> findSimilarByVectorWithOperation(
-            @Param("vector") String vector,
-            @Param("operation") String operation,
-            @Param("limit") int limit);
-    
-
     @Query(nativeQuery = true, value = 
             "INSERT INTO knowledge_chunks(id, source, content, metadata, embedding) " +
             "VALUES (:id, :source, :content, CAST(:metadata AS jsonb), :embedding\\:\\:vector) " +

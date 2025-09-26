@@ -74,12 +74,7 @@ public class AnthropicEmbeddingService implements EmbeddingService {
         }
     }
     
-    /**
-     * Generate embeddings for a small batch of text chunks
-     * 
-     * @param chunks The text chunks to embed
-     * @return List of embedded chunks
-     */
+
     private List<EmbeddedChunk> embedBatchInternal(List<TextChunk> chunks) throws Exception {
         List<String> texts = chunks.stream()
                 .map(TextChunk::content)
@@ -107,12 +102,7 @@ public class AnthropicEmbeddingService implements EmbeddingService {
         return embeddedChunks;
     }
     
-    /**
-     * Process a large batch of chunks in parallel sub-batches
-     * 
-     * @param chunks The text chunks to embed
-     * @return List of embedded chunks
-     */
+
     private List<EmbeddedChunk> embedBatchParallel(List<TextChunk> chunks) {
         logger.debug("Processing {} chunks in parallel sub-batches of size {}", chunks.size(), batchSize);
         

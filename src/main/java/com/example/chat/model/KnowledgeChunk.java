@@ -2,9 +2,6 @@ package com.example.chat.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.Type;
-
-import java.util.List;
 import java.util.UUID;
 
 @Entity

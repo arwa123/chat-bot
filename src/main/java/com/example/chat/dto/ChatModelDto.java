@@ -52,6 +52,7 @@ public class ChatModelDto {
         }
     }
 
+    @Builder
     public record RetrievedData(
             UUID id,
             String content,

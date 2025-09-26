@@ -10,9 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Implementation of DocumentProcessor for plain text files.
- */
+
 @Component
 public class TxtDocumentProcessor implements DocumentProcessor {
 

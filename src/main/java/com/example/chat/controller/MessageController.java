@@ -44,10 +44,8 @@ public class MessageController {
         ChatMessage userMsg = messageService.addMessage(session, sender, req.content(), contextJson);
 
         if (req.generate() && sender == Sender.user) {
-            // RAG: retrieve top-k and generate assistant response
             var retrieved = ragService.retrieve(req.content());
             String answer = ragService.generateAugmentedAnswer(req.content(), retrieved);
-            // Store assistant message with context that includes retrieved chunks
             var ctx = Map.of("retrieved", retrieved.stream().map(r -> Map.of(
                     "id", r.id().toString(),
                     "source", r.source(),

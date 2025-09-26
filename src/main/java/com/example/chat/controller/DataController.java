@@ -56,8 +56,8 @@ public class DataController {
 
 
     @PostMapping("/insert")
-    public ResponseEntity<DataIngestionResponse> upsert(@Valid @RequestBody ChatModelDto.DataIngestionRequest req) {
-        logger.info("Processing knowledge upsert request");
+    public ResponseEntity<DataIngestionResponse> insert(@Valid @RequestBody ChatModelDto.DataIngestionRequest req) {
+        logger.info("Processing data insert request");
       DataIngestionResponse response = dataIngestionService.insertData(req);
         if (response.success()) {
             return ResponseEntity.ok(response);
