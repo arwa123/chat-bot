@@ -9,12 +9,14 @@ import java.util.List;
 
 public class EmbeddingDto {
 
+
     public record EmbeddingTensorInput(
             String name,
             List<Integer> shape,
             String datatype,
             List<String> data
     ) {}
+
 
     public record EmbeddingRequest(
             List<EmbeddingTensorInput> inputs
@@ -29,6 +31,7 @@ public class EmbeddingDto {
                     )
             ));
         }
+
 
         public static EmbeddingRequest forMultipleTexts(List<String> texts) {
             return new EmbeddingRequest(List.of(
@@ -50,35 +53,36 @@ public class EmbeddingDto {
                 return Collections.emptyList();
             }
             
-            if (value instanceof List<?>) {
-                List<?> list = (List<?>) value;
+            if (value instanceof List<?> list) {
                 if (list.isEmpty()) {
                     return Collections.emptyList();
                 }
                 
-                if (list.get(0) instanceof List) {
+                Object first = list.get(0);
+                if (first instanceof List) {
                     return (List<List<Double>>) value;
                 }
                 
-                if (list.get(0) instanceof Number) {
+                if (first instanceof Number) {
                     List<Double> doubles = new ArrayList<>();
                     for (Object obj : list) {
-                        if (obj instanceof Number) {
-                            doubles.add(((Number) obj).doubleValue());
+                        if (obj instanceof Number number) {
+                            doubles.add(number.doubleValue());
                         }
                     }
                     return Collections.singletonList(doubles);
                 }
             }
             
-            if (value instanceof Number) {
-                List<Double> singleValue = Collections.singletonList(((Number) value).doubleValue());
+            if (value instanceof Number number) {
+                List<Double> singleValue = Collections.singletonList(number.doubleValue());
                 return Collections.singletonList(singleValue);
             }
             
             return Collections.emptyList();
         }
     }
+
 
     public record EmbeddingTensorOutput(
             String name,
@@ -87,7 +91,6 @@ public class EmbeddingDto {
             @JsonDeserialize(converter = EmbeddingDataConverter.class)
             Object data
     ) {
-
         public List<List<Double>> getEmbeddingData() {
             if (data instanceof List) {
                 return (List<List<Double>>) data;
@@ -95,6 +98,7 @@ public class EmbeddingDto {
             return Collections.emptyList();
         }
     }
+
 
     public record EmbeddingResponse(
             String model_name,
@@ -105,11 +109,10 @@ public class EmbeddingDto {
             if (outputs == null || outputs.isEmpty() || outputs.get(0) == null) {
                 return Collections.emptyList();
             }
-
-            EmbeddingTensorOutput output = outputs.get(0);
-            return output.getEmbeddingData();
+            return outputs.get(0).getEmbeddingData();
         }
     }
+
 
     public record EmbeddingError(
             String error,

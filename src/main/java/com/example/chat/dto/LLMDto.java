@@ -56,38 +56,13 @@ public class LLMDto {
         List<GeminiPart> parts
     ) {}
 
-    public record GeminiGenerationConfig(
-        int maxOutputTokens,
-        double temperature,
-        Double topP,
-        List<String> stopSequences
-    ) {
-        public static GeminiGenerationConfig defaults() {
-            return new GeminiGenerationConfig(512, 0.7, null, null);
-        }
-        
-        public static GeminiGenerationConfig create(int maxTokens, double temperature) {
-            return new GeminiGenerationConfig(maxTokens, temperature, null, null);
-        }
-    }
-
     public record GeminiRequest(
         List<GeminiContent> contents,
-        GeminiGenerationConfig generationConfig,
         List<String> safetySettings
     ) {
         public static GeminiRequest create(String prompt) {
             return new GeminiRequest(
                 List.of(new GeminiContent(List.of(new GeminiPart(prompt)))),
-                GeminiGenerationConfig.defaults(),
-                null
-            );
-        }
-
-        public static GeminiRequest create(String prompt, int maxTokens, double temperature) {
-            return new GeminiRequest(
-                List.of(new GeminiContent(List.of(new GeminiPart(prompt)))),
-                GeminiGenerationConfig.create(maxTokens, temperature),
                 null
             );
         }
@@ -102,17 +77,17 @@ public class LLMDto {
             if (candidates == null || candidates.isEmpty()) {
                 return null;
             }
-            
+
             GeminiCandidate candidate = candidates.get(0);
             if (candidate == null || candidate.content() == null) {
                 return null;
             }
-            
+
             List<GeminiPart> parts = candidate.content().parts();
             if (parts == null || parts.isEmpty()) {
                 return null;
             }
-            
+
             return parts.get(0).text();
         }
     }

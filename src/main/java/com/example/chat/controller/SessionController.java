@@ -43,18 +43,18 @@ public class SessionController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ChatSession> get(@PathVariable UUID id) {
+    public ResponseEntity<ChatSession> get(@PathVariable("id") UUID id) {
         return sessionService.get(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<ChatSession> update(@PathVariable UUID id, @RequestBody UpdateSessionReq req) {
+    public ResponseEntity<ChatSession> update(@PathVariable("id") UUID id, @RequestBody UpdateSessionReq req) {
         ChatSession s = sessionService.update(id, req.title(), req.isFavorite());
         return ResponseEntity.ok(s);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+    public ResponseEntity<Void> delete(@PathVariable("id") UUID id) {
         sessionService.delete(id);
         return ResponseEntity.noContent().build();
     }

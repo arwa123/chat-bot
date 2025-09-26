@@ -60,9 +60,9 @@ public class MessageController {
     }
 
     @GetMapping
-    public ResponseEntity<PagedResponse<ChatMessage>> list(@PathVariable UUID sessionId,
-                                                           @RequestParam(defaultValue = "0") int page,
-                                                           @RequestParam(defaultValue = "50") int size) {
+    public ResponseEntity<PagedResponse<ChatMessage>> list(@PathVariable("sessionId") UUID sessionId,
+                                                           @RequestParam("page") int page,
+                                                           @RequestParam("size") int size) {
         ChatSession session = sessionService.get(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found"));
         Page<ChatMessage> p = messageService.listMessages(session, page, size);
