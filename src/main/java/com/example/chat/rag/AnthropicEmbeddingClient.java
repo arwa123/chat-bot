@@ -46,8 +46,8 @@ public class AnthropicEmbeddingClient implements EmbeddingClient {
      * @param baseUrl Base URL for the embedding API
      */
     public AnthropicEmbeddingClient(
-            @Value("${rag.generation.anthropic.api-key}") String apiKey,
-            @Value("${rag.generation.anthropic.base-url}") String baseUrl) {
+            @Value("${rag.embedding.api-key}") String apiKey,
+            @Value("${rag.embedding.base-url}") String baseUrl) {
         
         this.baseUrl = baseUrl;
         logger.info("Initializing Anthropic embedding client with base URL: {}", baseUrl);

@@ -49,8 +49,9 @@ security:
 
 rag:
   embedding:
-    provider:  # stub|openai
-    model:
+    model: bge-m3
+    api-key:
+    base-url: 
     batch-size: 5
   chunking:
     default-type: fixed-size
@@ -65,16 +66,17 @@ rag:
     memory-optimization: true
   retrieval:
     top-k: 3
+llm:
   generation:
     provider: anthropic # stub|openai|anthropic|gemini
     anthropic:
-      model: claude-3-7-sonnet-20250219
+      model: qwen25-coder-32b
       api-key:
       base-url:
     gemini:
       model: gemini-1.5-pro
       api-key:
-      base-url: 
+      base-url:
 
 #  gemini-2.0-flash-lite
 #  gemini-2.0-flash

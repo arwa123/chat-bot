@@ -19,7 +19,7 @@ import java.util.List;
 
 @Component("anthropicLlmClient")
 @Primary
-@ConditionalOnProperty(name = "rag.generation.provider", havingValue = "anthropic")
+@ConditionalOnProperty(name = "llm.generation.provider", havingValue = "anthropic")
 public class AnthropicLLMClient implements LlmClient {
 
     private static final Logger logger = LoggerFactory.getLogger(AnthropicLLMClient.class);
@@ -30,12 +30,12 @@ public class AnthropicLLMClient implements LlmClient {
     private final WebClient webClient;
     private final String baseUrl;
 
-    @Value("${rag.generation.anthropic.model}")
+    @Value("${llm.generation.anthropic.model}")
     private String model;
 
     public AnthropicLLMClient(
-            @Value("${rag.generation.anthropic.api-key}") String apiKey,
-            @Value("${rag.generation.anthropic.base-url}") String baseUrl) {
+            @Value("${llm.generation.anthropic.api-key}") String apiKey,
+            @Value("${llm.generation.anthropic.base-url}") String baseUrl) {
         
         this.baseUrl = baseUrl;
         logger.info("Initializing Anthropic LLM client with model: {}", model);

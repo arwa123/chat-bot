@@ -35,7 +35,7 @@ public class AnthropicEmbeddingService implements EmbeddingService {
     @Autowired
     public AnthropicEmbeddingService(
             AnthropicEmbeddingClient embeddingClient,
-            @Value("${rag.embedding.model:bge-m3}") String modelName,
+            @Value("${rag.embedding.model}") String modelName,
             @Value("${rag.pipeline.thread-pool-size:5}") int threadPoolSize,
             @Value("${rag.embedding.batch-size:10}") int batchSize) {
         this.embeddingClient = embeddingClient;
