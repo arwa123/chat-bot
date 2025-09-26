@@ -1,11 +1,8 @@
 package com.example.chat.ingestion.pipeline;
 
-import com.example.chat.ingestion.chunking.ChunkingConfig;
-import com.example.chat.ingestion.chunking.FixedSizeTextChunker;
+
 import com.example.chat.ingestion.chunking.TextChunker;
-import com.example.chat.ingestion.embedding.AnthropicEmbeddingService;
 import com.example.chat.ingestion.embedding.EmbeddingService;
-import com.example.chat.ingestion.embedding.OpenAIEmbeddingService;
 import com.example.chat.ingestion.extraction.ExtractionException;
 import com.example.chat.ingestion.extraction.TextExtractor;
 import com.example.chat.ingestion.factory.EmbeddingServiceFactory;
@@ -21,7 +18,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -92,7 +88,7 @@ public class DataIngestionPipeline {
     public CompletableFuture<List<UUID>> processDataAsync(
             Document document) {
         
-        logger.info("Processing document asynchronously: {}", document.getFilename());
+        logger.info("Processing document asynchronously: {}", document.filename());
         
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -113,7 +109,7 @@ public class DataIngestionPipeline {
                         throwable.getMessage(), throwable);
             } else {
                 logger.info("Successfully processed document asynchronously: {}, created {} chunks", 
-                        document.getFilename(), chunkIds.size());
+                        document.filename(), chunkIds.size());
             }
         });
     }
@@ -127,13 +123,13 @@ public class DataIngestionPipeline {
      */
     public ExtractedContent extractText(Document document) throws PipelineException {
         try {
-            logger.debug("Extracting text from document: {}", document.getFilename());
+            logger.debug("Extracting text from document: {}", document.filename());
             
-            Optional<TextExtractor> extractorOpt = extractorFactory.getExtractor(document.getContentType());
+            Optional<TextExtractor> extractorOpt = extractorFactory.getExtractor(document.contentType());
             
             if (extractorOpt.isEmpty()) {
                 throw new PipelineException("No suitable text extractor found for content type: " + 
-                        document.getContentType());
+                        document.contentType());
             }
             
             TextExtractor extractor = extractorOpt.get();
@@ -154,7 +150,7 @@ public class DataIngestionPipeline {
      */
     public CompletableFuture<List<TextChunk>> chunkTextAsync(ExtractedContent content) {
         try {
-            logger.debug("Chunking text asynchronously from: {}", content.getSource());
+            logger.debug("Chunking text asynchronously from: {}", content.source());
             TextChunker chunker = chunkerFactory.getChunker();
             return CompletableFuture.supplyAsync(() -> {
                 try {

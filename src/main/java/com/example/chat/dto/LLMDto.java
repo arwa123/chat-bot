@@ -1,38 +1,10 @@
 package com.example.chat.dto;
 
+import lombok.Builder;
+
 import java.util.List;
 
 public class LLMDto {
-
-
-    public record GenerationRequest(
-        String prompt,
-        List<ChatModelDto.RetrievedKnowledge> context,
-        Double temperature,
-        Integer maxTokens
-    ) {}
-
-    public record GenerationResponse(
-        String text,
-        String model,
-        boolean augmented
-    ) {
-
-        public static GenerationResponse success(String text, String model, boolean augmented) {
-            return new GenerationResponse(text, model, augmented);
-        }
-        
-        public static GenerationResponse error(String errorMessage) {
-            return new GenerationResponse(errorMessage, null, false);
-        }
-    }
-
-
-    public record LlmError(
-        String errorType,
-        String message,
-        String requestId
-    ) {}
 
 
     public record Message(
@@ -41,21 +13,13 @@ public class LLMDto {
     ) {}
 
 
+    @Builder
     public record AnthropicChatRequest(
             String model,
             int max_tokens,
             double temperature,
             List<Message> messages
-    ) {
-        public static AnthropicChatRequest create(String model, String prompt, int maxTokens, double temperature) {
-            return new AnthropicChatRequest(
-                    model,
-                    maxTokens,
-                    temperature,
-                    List.of(new Message("user", prompt))
-            );
-        }
-    }
+    ){}
 
     public record AnthropicChatResponse(
             String id,

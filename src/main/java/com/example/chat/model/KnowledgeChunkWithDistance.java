@@ -7,10 +7,7 @@ import lombok.ToString;
 
 import java.util.UUID;
 
-/**
- * DTO for knowledge chunks with vector similarity distance
- * Used for results from vector similarity search queries
- */
+
 @Getter
 @AllArgsConstructor
 @NoArgsConstructor

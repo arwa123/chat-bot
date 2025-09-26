@@ -13,10 +13,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * OpenAI implementation of the EmbeddingService interface.
- * Uses OpenAI's embedding API to generate vector representations of text.
- */
+
 @Service
 public class OpenAIEmbeddingService implements EmbeddingService {
 

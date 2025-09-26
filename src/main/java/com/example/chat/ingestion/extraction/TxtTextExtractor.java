@@ -12,10 +12,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Implementation of TextExtractor for plain text files.
- * Simply reads the text content as-is.
- */
 @Component
 public class TxtTextExtractor implements TextExtractor {
     
@@ -30,18 +26,18 @@ public class TxtTextExtractor implements TextExtractor {
     @Override
     public ExtractedContent extract(Document document) throws ExtractionException {
         try {
-            logger.info("Extracting text from plain text document: {}", document.getFilename());
+            logger.info("Extracting text from plain text document: {}", document.filename());
             
-            String text = IOUtils.toString(document.getContent(), StandardCharsets.UTF_8);
-            Map<String, Object> metadata = new HashMap<>(document.getMetadata());
+            String text = IOUtils.toString(document.content(), StandardCharsets.UTF_8);
+            Map<String, Object> metadata = new HashMap<>(document.metadata());
             metadata.put("character_count", text.length());
             metadata.put("line_count", countLines(text));
             
             logger.debug("Extracted {} characters from text file", text.length());
             
             return ExtractedContent.builder()
-                    .id(document.getId())
-                    .source(document.getFilename())
+                    .id(document.id())
+                    .source(document.filename())
                     .content(text)
                     .metadata(metadata)
                     .build();

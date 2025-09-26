@@ -1,5 +1,6 @@
 package com.example.chat.llm;
 
+import com.example.chat.dto.LLMDto;
 import com.example.chat.dto.LLMDto.AnthropicChatRequest;
 import com.example.chat.dto.LLMDto.AnthropicChatResponse;
 import org.slf4j.Logger;
@@ -12,9 +13,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import reactor.netty.http.client.HttpClient;
-
 import javax.net.ssl.SSLException;
 import java.time.Duration;
+import java.util.List;
 
 @Component("anthropicLlmClient")
 @Primary
@@ -66,11 +67,6 @@ public class AnthropicLLMClient implements LlmClient {
         
         logger.debug("Anthropic LLM client initialized successfully");
     }
-
-    @Override
-    public String getModelName() {
-        return model;
-    }
     
     @Override
     public String generate(String prompt) {
@@ -82,13 +78,14 @@ public class AnthropicLLMClient implements LlmClient {
         try {
             logger.debug("Generating text with Anthropic API, prompt length: {}", prompt.length());
             
-            // Create request using DTO
-            AnthropicChatRequest request = AnthropicChatRequest.create(
-                model, 
-                prompt, 
-                DEFAULT_MAX_TOKENS, 
-                DEFAULT_TEMPERATURE
-            );
+
+            AnthropicChatRequest request = AnthropicChatRequest
+                    .builder()
+                    .model(model)
+                    .messages(List.of(new LLMDto.Message("user", prompt)))
+                    .max_tokens(DEFAULT_MAX_TOKENS)
+                    .temperature(DEFAULT_TEMPERATURE)
+                    .build();
             
 
             AnthropicChatResponse response = webClient.post()
@@ -119,58 +116,6 @@ public class AnthropicLLMClient implements LlmClient {
                     " (Status: " + e.getStatusCode() + ")", e);
         } catch (Exception e) {
             logger.error("Error calling Anthropic API", e);
-            throw new RuntimeException("Error calling Anthropic API: " + e.getMessage(), e);
-        }
-    }
-    
-    /**
-     * Generate text with custom parameters
-     * 
-     * @param prompt The text prompt to generate from
-     * @param maxTokens Maximum number of tokens to generate
-     * @param temperature Temperature parameter (0.0-1.0) controlling randomness
-     * @return The generated text
-     */
-    public String generate(String prompt, int maxTokens, double temperature) {
-        if (prompt == null || prompt.isBlank()) {
-            throw new IllegalArgumentException("Prompt cannot be empty");
-        }
-        
-        try {
-            logger.debug("Generating text with custom parameters - maxTokens: {}, temperature: {}", 
-                    maxTokens, temperature);
-            
-            AnthropicChatRequest request = AnthropicChatRequest.create(
-                model, 
-                prompt, 
-                maxTokens, 
-                temperature
-            );
-            
-            AnthropicChatResponse response = webClient.post()
-                    .uri(API_ENDPOINT)
-                    .bodyValue(request)
-                    .retrieve()
-                    .bodyToMono(AnthropicChatResponse.class)
-                    .block();
-            
-            if (response == null) {
-                throw new RuntimeException("Null response received from Anthropic API");
-            }
-            
-            String content = response.getContent();
-            if (content == null || content.isBlank()) {
-                throw new RuntimeException("Empty content received from Anthropic API");
-            }
-            
-            return content;
-            
-        } catch (WebClientResponseException e) {
-            logger.error("Anthropic API error with custom parameters: {} (Status: {})", 
-                    e.getMessage(), e.getStatusCode());
-            throw new RuntimeException("Anthropic API error: " + e.getMessage(), e);
-        } catch (Exception e) {
-            logger.error("Error calling Anthropic API with custom parameters", e);
             throw new RuntimeException("Error calling Anthropic API: " + e.getMessage(), e);
         }
     }

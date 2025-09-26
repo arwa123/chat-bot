@@ -6,17 +6,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
-/**
- * Chunks text into fixed-size segments with optional overlap.
- * Simple but effective chunking strategy for most content types.
- */
+
 @Component
 public class FixedSizeTextChunker implements TextChunker {
     
@@ -32,8 +28,7 @@ public class FixedSizeTextChunker implements TextChunker {
             @Value("${rag.pipeline.thread-pool-size:5}") int threadPoolSize) {
         this.defaultChunkSize = defaultChunkSize;
         this.defaultOverlapSize = defaultOverlapSize;
-        
-        // Initialize thread pool for parallel chunking
+
         int poolSize = threadPoolSize > 0 ? threadPoolSize : 5;
         this.chunkingExecutor = Executors.newFixedThreadPool(poolSize, r -> {
             Thread t = new Thread(r, "chunking-worker-thread");
@@ -54,30 +49,7 @@ public class FixedSizeTextChunker implements TextChunker {
     public List<TextChunk> chunk(ExtractedContent content) {
         return chunk(content, defaultChunkSize, defaultOverlapSize);
     }
-    
-    /**
-     * Chunk text in parallel using CompletableFuture
-     * 
-     * @param content The extracted content to chunk
-     * @return CompletableFuture that will resolve to a list of text chunks
-     */
-    public CompletableFuture<List<TextChunk>> chunkAsync(ExtractedContent content) {
-        return chunkAsync(content, defaultChunkSize, defaultOverlapSize);
-    }
-    
-    /**
-     * Chunk text in parallel with specified chunk size and overlap
-     * 
-     * @param content The extracted content to chunk
-     * @param maxChunkSize Maximum size of each chunk
-     * @param overlapSize Size of overlap between chunks
-     * @return CompletableFuture that will resolve to a list of text chunks
-     */
-    public CompletableFuture<List<TextChunk>> chunkAsync(ExtractedContent content, int maxChunkSize, int overlapSize) {
-        return CompletableFuture.supplyAsync(() -> {
-            return chunk(content, maxChunkSize, overlapSize);
-        }, chunkingExecutor);
-    }
+
     
     /**
      * Chunk text with specified chunk size and overlap
@@ -101,7 +73,7 @@ public class FixedSizeTextChunker implements TextChunker {
      * @return List of text chunks
      */
     private List<TextChunk> chunkWithStrategy(ExtractedContent content, int maxChunkSize, int overlapSize, boolean useParallel) {
-        String text = content.getContent();
+        String text = content.content();
         
         if (text == null || text.isEmpty()) {
             logger.warn("Empty text provided for chunking");
@@ -174,7 +146,7 @@ public class FixedSizeTextChunker implements TextChunker {
             chunks = futures.stream()
                     .map(CompletableFuture::join)
                     .flatMap(List::stream)
-                    .sorted(Comparator.comparingInt(TextChunk::getChunkIndex))
+                    .sorted(Comparator.comparingInt(TextChunk::chunkIndex))
                     .collect(Collectors.toList());
         } else {
             // For smaller texts, process sequentially
@@ -319,19 +291,19 @@ public class FixedSizeTextChunker implements TextChunker {
         Map<String, Object> metadata = new HashMap<>();
         
         // Add only essential metadata
-        metadata.put("document_id", content.getId().toString());
+        metadata.put("document_id", content.id().toString());
         metadata.put("chunk_index", chunkIndex);
         metadata.put("chunk_text_length", chunkText.length());
         
         // Only add source-related metadata if present and relevant
-        if (content.getMetadata().containsKey("source_type")) {
-            metadata.put("source_type", content.getMetadata().get("source_type"));
+        if (content.metadata().containsKey("source_type")) {
+            metadata.put("source_type", content.metadata().get("source_type"));
         }
         
         return TextChunk.builder()
                 .id(UUID.randomUUID())
-                .documentId(content.getId())
-                .source(content.getSource())
+                .documentId(content.id())
+                .source(content.source())
                 .content(chunkText)
                 .metadata(metadata)
                 .chunkIndex(chunkIndex)

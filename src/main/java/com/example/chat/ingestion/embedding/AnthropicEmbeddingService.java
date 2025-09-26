@@ -82,7 +82,7 @@ public class AnthropicEmbeddingService implements EmbeddingService {
      */
     private List<EmbeddedChunk> embedBatchInternal(List<TextChunk> chunks) throws Exception {
         List<String> texts = chunks.stream()
-                .map(TextChunk::getContent)
+                .map(TextChunk::content)
                 .collect(Collectors.toList());
         
         List<List<Double>> embeddings = embeddingClient.getEmbeddingsForMultipleTexts(texts);
@@ -93,12 +93,12 @@ public class AnthropicEmbeddingService implements EmbeddingService {
             List<Double> embedding = embeddings.get(i);
             
             embeddedChunks.add(EmbeddedChunk.builder()
-                    .id(chunk.getId())
-                    .documentId(chunk.getDocumentId())
-                    .source(chunk.getSource())
-                    .content(chunk.getContent())
-                    .metadata(chunk.getMetadata())
-                    .chunkIndex(chunk.getChunkIndex())
+                    .id(chunk.id())
+                    .documentId(chunk.documentId())
+                    .source(chunk.source())
+                    .content(chunk.content())
+                    .metadata(chunk.metadata())
+                    .chunkIndex(chunk.chunkIndex())
                     .embedding(embedding)
                     .embeddingModel(getModelName())
                     .build());

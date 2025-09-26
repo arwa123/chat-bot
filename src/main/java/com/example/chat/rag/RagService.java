@@ -1,6 +1,6 @@
 package com.example.chat.rag;
 
-import com.example.chat.dto.ChatModelDto.RetrievedKnowledge;
+import com.example.chat.dto.ChatModelDto.RetrievedData;
 import com.example.chat.llm.LlmClient;
 import com.example.chat.model.KnowledgeChunkWithDistance;
 import com.example.chat.repository.KnowledgeChunkRepository;
@@ -17,14 +17,10 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/**
- * Service for Retrieval Augmented Generation (RAG)
- * Handles vector search and LLM generation with context
- */
 @Service
 @RequiredArgsConstructor
 public class RagService {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(RagService.class);
 
     private final KnowledgeChunkRepository knowledgeRepository;
@@ -36,26 +32,26 @@ public class RagService {
 
     /**
      * Retrieve knowledge chunks based on semantic similarity to the query
-     * 
+     *
      * @param query Text query to find similar chunks for
      * @return List of retrieved knowledge chunks with similarity scores
      */
-    public List<RetrievedKnowledge> retrieve(String query) {
+    public List<RetrievedData> retrieve(String query) {
         return retrieve(query, topK);
     }
-    
+
     /**
      * Retrieve knowledge chunks using vector similarity search
-     * 
+     *
      * @param query The text query to find similar chunks for
      * @param limit Maximum number of results to return
      * @return List of retrieved knowledge chunks with similarity scores
      */
     @Transactional(readOnly = true)
-    public List<RetrievedKnowledge> retrieve(String query, int limit) {
+    public List<RetrievedData> retrieve(String query, int limit) {
         try {
             logger.debug("Retrieving knowledge chunks for query: {}", query);
-            
+
             // Generate embeddings for the query
             List<Double> vec = embeddingClient.getEmbeddings(query);
             String vectorLiteral = toVectorLiteral(vec);
@@ -64,15 +60,15 @@ public class RagService {
             logger.debug("Retrieved {} results from knowledge base", results.size());
 
             return results.stream()
-                .map(chunk -> new RetrievedKnowledge(
-                    chunk.getId(),
-                    chunk.getContent(),
-                    chunk.getSource(),
-                    chunk.getMetadata(),
-                    chunk.getDistance()
-                ))
-                .collect(Collectors.toList());
-                
+                    .map(chunk -> new RetrievedData(
+                            chunk.getId(),
+                            chunk.getContent(),
+                            chunk.getSource(),
+                            chunk.getMetadata(),
+                            chunk.getDistance()
+                    ))
+                    .collect(Collectors.toList());
+
         } catch (DataIntegrityViolationException e) {
             logger.error("Vector dimension mismatch: {}", e.getMessage());
             throw new RuntimeException("Vector dimension mismatch between embedding client and database schema", e);
@@ -87,29 +83,23 @@ public class RagService {
 
     /**
      * Generate an answer to the user's message using retrieved knowledge context
-     * 
+     *
      * @param userMessage The user's question or message
-     * @param context List of retrieved knowledge chunks to use as context
+     * @param context     List of retrieved knowledge chunks to use as context
      * @return Generated answer that incorporates the provided context
      */
-    public String generateAugmentedAnswer(String userMessage, List<RetrievedKnowledge> context) {
+    public String generateAugmentedAnswer(String userMessage, List<RetrievedData> context) {
         try {
             logger.debug("Generating augmented answer for user message using {} context chunks", context.size());
-            
+            String s = "You are a helpful assistant. Answer the user's question using ONLY the provided context. If the answer is not in the context, say you don't know. User question: %s Context: %s";
+
             String ctx = context.stream()
-                    .map(c -> String.format("- Source: %s (score=%.4f)\n%s", 
+                    .map(c -> String.format("- Source: %s (score=%.4f)\n%s",
                             c.source(), c.score(), c.content()))
                     .collect(Collectors.joining("\n\n"));
-            
-            String prompt = """
-You are a helpful assistant. Answer the user's question using ONLY the provided context. If the answer is not in the context, say you don't know.
-User question:
-%s
 
-Context:
-%s
-""".formatted(userMessage, ctx);
-            
+            String prompt = s.formatted(userMessage, ctx);
+
             logger.debug("Sending augmented prompt to LLM, length: {}", prompt.length());
             return llmClient.generate(prompt);
         } catch (Exception e) {
@@ -123,11 +113,9 @@ Context:
         try {
             logger.debug("Inserted knowledge chunk with ID: {}, source: {}", id, source);
 
-            // Generate embeddings for the content
             List<Double> vec = embeddingClient.getEmbeddings(content);
             String vectorLiteral = toVectorLiteral(vec);
 
-            // Insert or update the knowledge chunk with its embedding
             knowledgeRepository.upsertWithEmbedding(id, source, content, metadataJson, vectorLiteral);
 
             logger.info("Successfully inserted knowledge chunk with ID: {}", id);
@@ -146,7 +134,7 @@ Context:
 
     /**
      * Converts a list of doubles to a PostgreSQL vector literal string
-     * 
+     *
      * @param vec List of vector components
      * @return String in PostgreSQL vector format [x,y,z,...]
      */
@@ -154,8 +142,8 @@ Context:
         try {
             // Convert to PostgreSQL vector literal format
             return "[" + vec.stream()
-                .map(d -> String.format(java.util.Locale.US, "%.6f", d))
-                .collect(Collectors.joining(",")) + "]";
+                    .map(d -> String.format(java.util.Locale.US, "%.6f", d))
+                    .collect(Collectors.joining(",")) + "]";
         } catch (Exception e) {
             logger.error("Error creating vector literal", e);
             throw new RuntimeException("Error creating vector literal: " + e.getMessage(), e);

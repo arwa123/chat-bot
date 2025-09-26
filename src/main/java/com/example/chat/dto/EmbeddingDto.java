@@ -1,19 +1,12 @@
 package com.example.chat.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.util.StdConverter;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
-/**
- * DTOs for embedding and knowledge base operations
- * Using Java Records for immutable data transfer objects
- */
 public class EmbeddingDto {
 
     public record EmbeddingTensorInput(
@@ -49,9 +42,7 @@ public class EmbeddingDto {
         }
     }
 
-    /**
-     * Converter to handle JSON deserialization for embedding data that might be nested differently
-     */
+
     public static class EmbeddingDataConverter extends StdConverter<Object, List<List<Double>>> {
         @Override
         public List<List<Double>> convert(Object value) {
@@ -117,14 +108,6 @@ public class EmbeddingDto {
 
             EmbeddingTensorOutput output = outputs.get(0);
             return output.getEmbeddingData();
-        }
-
-        public List<Double> getFirstEmbedding() {
-            List<List<Double>> embeddings = getEmbeddings();
-            if (embeddings == null || embeddings.isEmpty()) {
-                return Collections.emptyList();
-            }
-            return embeddings.get(0);
         }
     }
 

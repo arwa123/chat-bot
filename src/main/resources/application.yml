@@ -67,17 +67,14 @@ rag:
     top-k: 3
   generation:
     provider: anthropic # stub|openai|anthropic|gemini
-    openai:
+    anthropic:
       model: claude-3-7-sonnet-20250219
       api-key:
-    anthropic:
-      model: gpt-4o
-      api-key:
-      base-url: 
+      base-url:
     gemini:
       model: gemini-1.5-pro
-      api-key: AIzaSyBnA91rE0yGrBTysGl_di-tgXiizzvQg3U
-      base-url: https://generativelanguage.googleapis.com
+      api-key:
+      base-url: 
 
 #  gemini-2.0-flash-lite
 #  gemini-2.0-flash

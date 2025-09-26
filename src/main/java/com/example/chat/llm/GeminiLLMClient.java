@@ -38,11 +38,7 @@ public class GeminiLLMClient implements LlmClient {
                 
         logger.debug("Gemini LLM client initialized successfully");
     }
-    
-    @Override
-    public String getModelName() {
-        return model;
-    }
+
 
     @Override
     public String generate(String prompt) {

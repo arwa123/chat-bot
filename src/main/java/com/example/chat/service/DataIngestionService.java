@@ -1,6 +1,5 @@
 package com.example.chat.service;
 
-import com.example.chat.dto.ChatModelDto;
 import com.example.chat.dto.DocumentDto.DocumentResponse;
 import com.example.chat.ingestion.document.DocumentProcessor;
 import com.example.chat.ingestion.factory.DocumentProcessorFactory;
@@ -80,7 +79,7 @@ public class DataIngestionService {
                 List<UUID> chunkIds = pipeline.processDataAsync(document).join();
                 
                 return DocumentResponse.success(
-                        document.getId(), 
+                        document.id(),
                         chunkIds.size(),
                         "Successfully processed document and created " + chunkIds.size() + " chunks using parallel processing"
                 );
