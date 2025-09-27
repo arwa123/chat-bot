@@ -51,7 +51,7 @@ public class MessageController {
                     "source", r.source(),
                     "score", r.score()
             )).toList());
-            ChatMessage assistant = messageService.addMessage(session, Sender.assistant, answer, new com.fasterxml.jackson.databind.ObjectMapper().valueToTree(ctx).toString());
+            ChatMessage assistant = messageService.addMessage(session, Sender.assistant, answer, objectMapper.valueToTree(ctx).toString());
             return ResponseEntity.ok(Map.of("user", userMsg, "assistant", assistant));
         }
         return ResponseEntity.ok(userMsg);

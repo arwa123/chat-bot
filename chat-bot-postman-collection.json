@@ -1,0 +1,336 @@
+{
+	"info": {
+		"_postman_id": "e4b76a2a-42b6-44fa-b122-615fe4acbbd6",
+		"name": "Chat Service",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "13009474"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/actuator/health",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"actuator",
+						"health"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Session",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "dev-key-123"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"title\": \"My first session\",\n  \"userId\": \"asaify\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8080/v1/sessions",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"v1",
+						"sessions"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Session",
+			"request": {
+				"method": "PATCH",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "dev-key-123"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"title\": \"My first session\",\n  \"isFavorite\": true\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8080/v1/sessions/{{SESSION_ID}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"v1",
+						"sessions",
+						"{{SESSION_ID}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Session",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "dev-key-123"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"title\": \"My first session\",\n  \"userId\": \"asaify\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8080/v1/sessions/{{SESSION_ID}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"v1",
+						"sessions",
+						"{{SESSION_ID}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Session",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "dev-key-123"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"title\": \"My first session\",\n  \"userId\": \"asaify\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8080/v1/sessions/{{SESSION_ID}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"v1",
+						"sessions",
+						"{{SESSION_ID}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Add Data",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "dev-key-123"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"content\": \"Quarterly revenue grew 12% YoY.\",\n    \"source\": \"Q2-Report.pdf\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8080/v1/data/insert",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"v1",
+						"data",
+						"insert"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Upload Data",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "dev-key-123"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": []
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:8080/v1/data/upload",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"v1",
+						"data",
+						"upload"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Add User Message + Generate Assistant Reply",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "dev-key-123"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Accept",
+						"value": "",
+						"type": "text",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"sender\": \"user\",\n    \"content\": \"What was our revenue growth?\",\n    \"generate\": true,\n    \"userId\": \"asaify\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8080/v1/sessions/{{SESSION_ID}}/messages?page=0&size=50",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"v1",
+						"sessions",
+						"{{SESSION_ID}}",
+						"messages"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "0"
+						},
+						{
+							"key": "size",
+							"value": "50"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Chat Messages",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "dev-key-123"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:8080/v1/sessions/{{SESSION_ID}}/messages?page=0&size=50",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"v1",
+						"sessions",
+						"{{SESSION_ID}}",
+						"messages"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "0"
+						},
+						{
+							"key": "size",
+							"value": "50"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "SESSION_ID",
+			"value": "replace-with-your-session-id"
+		}
+	]
+}

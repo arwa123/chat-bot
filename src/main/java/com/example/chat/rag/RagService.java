@@ -2,9 +2,7 @@ package com.example.chat.rag;
 
 import com.example.chat.dto.ChatModelDto.RetrievedData;
 import com.example.chat.llm.LlmClient;
-import com.example.chat.model.KnowledgeChunkWithDistance;
 import com.example.chat.repository.KnowledgeChunkRepository;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.slf4j.Logger;
@@ -13,7 +11,6 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -30,40 +27,6 @@ public class RagService {
     private final EmbeddingClient embeddingClient;
     private final LlmClient llmClient;
     private final JdbcTemplate jdbcTemplate;
-
-
-    @Transactional(readOnly = true)
-    public List<RetrievedData> retrieve2(String query) {
-        try {
-            logger.debug("Retrieving knowledge chunks for query: {}", query);
-
-            List<Double> vec = embeddingClient.getEmbeddings(query);
-            String vectorLiteral = toVectorLiteral(vec);
-
-            List<KnowledgeChunkWithDistance> results = knowledgeRepository.findSimilarByVector(vectorLiteral, 10);
-
-            return results.stream()
-                    .map(chunk -> new RetrievedData(
-                            chunk.getId(),
-                            chunk.getContent(),
-                            chunk.getSource(),
-                            chunk.getMetadata(),
-                            chunk.getDistance()
-                    ))
-                    .collect(Collectors.toList());
-
-        } catch (DataIntegrityViolationException e) {
-            logger.error("Vector dimension mismatch: {}", e.getMessage());
-            throw new RuntimeException("Vector dimension mismatch between embedding client and database schema", e);
-        } catch (DataAccessException e) {
-            logger.error("Database access error retrieving knowledge chunks: {}", e.getMessage());
-            throw new RuntimeException("Database error retrieving knowledge chunks", e);
-        } catch (Exception e) {
-            logger.error("Error retrieving knowledge chunks", e);
-            throw new RuntimeException("Error retrieving knowledge chunks: " + e.getMessage(), e);
-        }
-    }
-
 
     public List<RetrievedData> retrieve(String query) {
         List<Double> vec = embeddingClient.getEmbeddings(query);
@@ -114,30 +77,14 @@ public class RagService {
                 
                 Answer:
                 """;
-
             String ctx = context.stream()
-                    .map(c -> {
-                        StringBuilder sb = new StringBuilder();
-                        sb.append(String.format("--- Source: %s (relevance: %.4f) ---\n", c.source(), c.score()));
-                        sb.append(c.content()).append("\n");
-                        
-                        // Include relevant metadata if available
-                        if (c.metadataJson() != null && !c.metadataJson().isBlank()) {
-                            try {
-                                sb.append("Metadata: ").append(c.metadataJson()).append("\n");
-                            } catch (Exception e) {
-                                logger.warn("Failed to include metadata in context", e);
-                            }
-                        }
-                        
-                        return sb.toString();
-                    })
+                    .map(c -> String.format("- Source: %s (score=%.4f)\n%s", c.source(), c.score(), c.content()))
                     .collect(Collectors.joining("\n\n"));
 
             String prompt = promptTemplate.formatted(userMessage, ctx);
 
             logger.debug("Sending enhanced augmented prompt to LLM, length: {}", prompt.length());
-            return llmClient.generate(userMessage);
+            return llmClient.generate(prompt);
         } catch (Exception e) {
             logger.error("Error generating augmented answer", e);
             throw new RuntimeException("Error generating augmented answer: " + e.getMessage(), e);
@@ -177,18 +124,5 @@ public class RagService {
             logger.error("Error creating vector literal", e);
             throw new RuntimeException("Error creating vector literal: " + e.getMessage(), e);
         }
-    }
-    
-
-    @Getter
-    private  class ScoredResult {
-        private final KnowledgeChunkWithDistance chunk;
-        private final double score;
-
-        public ScoredResult(KnowledgeChunkWithDistance chunk, double score) {
-            this.chunk = chunk;
-            this.score = score;
-        }
-
     }
 }
