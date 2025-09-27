@@ -14,7 +14,7 @@
 - mvn spring-boot:run
 
 ```
-- Postman Collection : chat-bot-backend-postman.json
+- Postman Collection : chat-bot-postman-collection.json
 - Swagger UI: http://localhost:8080/swagger-ui/index.html/
 - Postgres on localhost:5432 (db=chat_bot, user=asaify, pass=)
 - API_KEY=dev-key-123

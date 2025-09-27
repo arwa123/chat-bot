@@ -58,52 +58,12 @@ public class AnthropicEmbeddingService implements EmbeddingService {
         return modelName;
     }
 
+
     @Override
-    public List<EmbeddedChunk> embedBatch(List<TextChunk> chunks) throws EmbeddingException {
-        try {
-            logger.debug("Generating embeddings for {} chunks in batch", chunks.size());
-            
-            if (chunks.isEmpty()) {
-                return new ArrayList<>();
-            }
-            return embedBatchParallel(chunks);
-            
-        } catch (Exception e) {
-            logger.error("Error batch generating embeddings: {}", e.getMessage(), e);
-            throw new EmbeddingException("Failed to generate embeddings in batch", e);
+    public List<EmbeddedChunk> embedBatch(List<TextChunk> chunks) {
+        if (chunks.isEmpty()) {
+            return new ArrayList<>();
         }
-    }
-    
-
-    private List<EmbeddedChunk> embedBatchInternal(List<TextChunk> chunks) throws Exception {
-        List<String> texts = chunks.stream()
-                .map(TextChunk::content)
-                .collect(Collectors.toList());
-        
-        List<List<Double>> embeddings = embeddingClient.getEmbeddingsForMultipleTexts(texts);
-        
-        List<EmbeddedChunk> embeddedChunks = new ArrayList<>();
-        for (int i = 0; i < chunks.size(); i++) {
-            TextChunk chunk = chunks.get(i);
-            List<Double> embedding = embeddings.get(i);
-            
-            embeddedChunks.add(EmbeddedChunk.builder()
-                    .id(chunk.id())
-                    .documentId(chunk.documentId())
-                    .source(chunk.source())
-                    .content(chunk.content())
-                    .metadata(chunk.metadata())
-                    .chunkIndex(chunk.chunkIndex())
-                    .embedding(embedding)
-                    .embeddingModel(getModelName())
-                    .build());
-        }
-        
-        return embeddedChunks;
-    }
-    
-
-    private List<EmbeddedChunk> embedBatchParallel(List<TextChunk> chunks) {
         logger.debug("Processing {} chunks in parallel sub-batches of size {}", chunks.size(), batchSize);
         
         List<CompletableFuture<List<EmbeddedChunk>>> batchFutures = new ArrayList<>();
@@ -114,7 +74,7 @@ public class AnthropicEmbeddingService implements EmbeddingService {
             
             batchFutures.add(CompletableFuture.supplyAsync(() -> {
                 try {
-                    return embedBatchInternal(batch);
+                    return embedChunks(batch);
                 } catch (Exception e) {
                     logger.error("Error generating embeddings for batch: {}", e.getMessage(), e);
                     throw new RuntimeException("Failed to generate embeddings for batch", e);
@@ -128,5 +88,35 @@ public class AnthropicEmbeddingService implements EmbeddingService {
                         .flatMap(List::stream)
                         .collect(Collectors.toList()))
                 .join();
+    }
+
+    private List<EmbeddedChunk> embedChunks(List<TextChunk> chunks) throws Exception {
+        if (chunks.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<String> texts = chunks.stream()
+                .map(TextChunk::content)
+                .collect(Collectors.toList());
+
+        List<List<Double>> embeddings = embeddingClient.getEmbeddingsForMultipleTexts(texts);
+
+        List<EmbeddedChunk> embeddedChunks = new ArrayList<>();
+        for (int i = 0; i < chunks.size(); i++) {
+            TextChunk chunk = chunks.get(i);
+            List<Double> embedding = embeddings.get(i);
+
+            embeddedChunks.add(EmbeddedChunk.builder()
+                    .id(chunk.id())
+                    .documentId(chunk.documentId())
+                    .source(chunk.source())
+                    .content(chunk.content())
+                    .metadata(chunk.metadata())
+                    .chunkIndex(chunk.chunkIndex())
+                    .embedding(embedding)
+                    .embeddingModel(getModelName())
+                    .build());
+        }
+
+        return embeddedChunks;
     }
 }

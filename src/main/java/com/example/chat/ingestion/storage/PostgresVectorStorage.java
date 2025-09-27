@@ -46,15 +46,9 @@ public class PostgresVectorStorage implements VectorStorage {
             "    content = EXCLUDED.content, " +
             "    metadata = EXCLUDED.metadata, " +
             "    embedding = EXCLUDED.embedding";
-            
-    private static final String FIND_SIMILAR_SQL = 
-            "SELECT id, content, source, metadata, " +
-            "       (embedding <=> ?::vector) AS distance " +
-            "FROM knowledge_chunks " +
-            "ORDER BY embedding <=> ?::vector " +
-            "LIMIT ?";
+
     
-    public PostgresVectorStorage(JdbcTemplate jdbcTemplate, 
+    public PostgresVectorStorage(JdbcTemplate jdbcTemplate,
                                 ObjectMapper objectMapper,
                                 EmbeddingServiceFactory embeddingServiceFactory) {
         this.jdbcTemplate = jdbcTemplate;
@@ -67,7 +61,7 @@ public class PostgresVectorStorage implements VectorStorage {
             t.setDaemon(true);
             return t;
         });
-        
+
         logger.info("Initialized Postgres vector storage with thread pool size {} and batch size {}",
                 poolSize, this.batchSize);
     }
@@ -83,24 +77,16 @@ public class PostgresVectorStorage implements VectorStorage {
     @Transactional
     public UUID store(EmbeddedChunk chunk) throws StorageException {
         try {
-            logger.debug("Storing embedded chunk with ID: {}", chunk.id());
-            
-            // Ensure document ID, chunk index, and embedding model info are stored in metadata
             Map<String, Object> enhancedMetadata = new HashMap<>(chunk.metadata());
-            
             if (chunk.documentId() != null) {
                 enhancedMetadata.put("document_id", chunk.documentId().toString());
             }
-            
             enhancedMetadata.put("chunk_index", chunk.chunkIndex());
-            
             if (chunk.embeddingModel() != null) {
                 enhancedMetadata.put("embedding_model", chunk.embeddingModel());
             }
-            
             String metadataJson = objectMapper.writeValueAsString(enhancedMetadata);
             String vectorLiteral = toVectorLiteral(chunk.embedding());
-            
             jdbcTemplate.update(INSERT_CHUNK_SQL,
                     chunk.id(),
                     chunk.source(),
@@ -119,20 +105,10 @@ public class PostgresVectorStorage implements VectorStorage {
     @Transactional
     public List<UUID> storeBatch(List<EmbeddedChunk> chunks) throws StorageException {
         try {
-            logger.debug("Storing {} embedded chunks in batch", chunks.size());
-
-            if (chunks.isEmpty()) {
-                return new ArrayList<>();
-            }
-
-            // For small batches, use the standard approach
             if (chunks.size() <= batchSize) {
                 return storeBatchSequential(chunks);
             }
-
-            // For larger batches, process in parallel
             return storeBatchParallel(chunks);
-
         } catch (Exception e) {
             logger.error("Error batch storing embedded chunks: {}", e.getMessage(), e);
             throw new StorageException("Failed to store embedded chunks in batch: " + e.getMessage(), e);

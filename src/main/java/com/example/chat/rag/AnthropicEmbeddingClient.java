@@ -10,7 +10,6 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
@@ -176,12 +175,6 @@ public class AnthropicEmbeddingClient implements EmbeddingClient {
             logger.debug("Successfully generated {} embeddings", embeddings.size());
             return embeddings;
             
-        } catch (WebClientResponseException e) {
-            String responseBody = e.getResponseBodyAsString();
-            logger.error("Embedding API error: {} - Response: {} (Status: {})",
-                    e.getMessage(), responseBody, e.getStatusCode());
-            throw new RuntimeException("Embedding API error: " + e.getMessage() +
-                    " Response: " + responseBody + " (Status: " + e.getStatusCode() + ")", e);
         } catch (Exception e) {
             logger.error("Error calling embedding API", e);
             throw new RuntimeException("Error calling embedding API: " + e.getMessage(), e);

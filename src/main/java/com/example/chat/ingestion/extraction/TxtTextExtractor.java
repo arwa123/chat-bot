@@ -26,32 +26,15 @@ public class TxtTextExtractor implements TextExtractor {
     @Override
     public ExtractedContent extract(Document document) throws ExtractionException {
         try {
-            logger.info("Extracting text from plain text document: {}", document.filename());
-            
             String text = IOUtils.toString(document.content(), StandardCharsets.UTF_8);
-            Map<String, Object> metadata = new HashMap<>(document.metadata());
-            metadata.put("character_count", text.length());
-            metadata.put("line_count", countLines(text));
-            
-            logger.debug("Extracted {} characters from text file", text.length());
-            
             return ExtractedContent.builder()
                     .id(document.id())
                     .source(document.filename())
                     .content(text)
-                    .metadata(metadata)
                     .build();
         } catch (IOException e) {
             logger.error("Error extracting text from plain text file: {}", e.getMessage(), e);
             throw new ExtractionException("Failed to extract text from plain text document: " + e.getMessage(), e);
         }
-    }
-
-    private int countLines(String text) {
-        if (text == null || text.isEmpty()) {
-            return 0;
-        }
-        
-        return text.split("\r\n|\r|\n").length;
     }
 }
