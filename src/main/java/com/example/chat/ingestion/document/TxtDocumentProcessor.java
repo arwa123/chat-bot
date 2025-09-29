@@ -6,10 +6,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-
+import org.apache.commons.io.IOUtils;
 
 @Component
 public class TxtDocumentProcessor implements DocumentProcessor {
@@ -39,7 +40,7 @@ public class TxtDocumentProcessor implements DocumentProcessor {
                 .filename(file.getOriginalFilename())
                 .contentType(file.getContentType())
                 .metadata(metadata)
-                .content(file.getInputStream())
+                .content(IOUtils.toString(file.getInputStream(), StandardCharsets.UTF_8))
                 .build();
     }
 }

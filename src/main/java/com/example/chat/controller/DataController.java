@@ -13,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -32,16 +33,19 @@ public class DataController {
             @RequestParam(value = "source", required = false) String source) {
 
         logger.info("Processing knowledge file upload: {}", file.getOriginalFilename());
-
-        DocumentResponse docResponse = dataIngestionService.processFile(
-                file, source != null ? Map.of("source", source) : null
-        );
+        Map<String, Object> metadata = null ;
+        if(source != null) {
+            metadata = new HashMap<>();
+            metadata.put("source", source);
+        }
+        DocumentResponse docResponse = dataIngestionService.processFileAsync(
+                file, metadata);
 
         DataIngestionResponse response;
         if (docResponse.success()) {
             response = DataIngestionResponse.success(
                     docResponse.documentId(),
-                    "Document successfully processed into " + docResponse.chunkCount() + " chunks"
+                    "Document successfully processed"
             );
         } else {
             response = DataIngestionResponse.error(docResponse.message());

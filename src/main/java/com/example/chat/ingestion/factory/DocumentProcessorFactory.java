@@ -1,6 +1,9 @@
 package com.example.chat.ingestion.factory;
 
+import com.example.chat.ingestion.chunking.FixedSizeTextChunker;
 import com.example.chat.ingestion.document.DocumentProcessor;
+import com.example.chat.ingestion.document.TxtDocumentProcessor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import java.util.List;
 
@@ -9,18 +12,12 @@ import java.util.List;
  */
 @Component
 public class DocumentProcessorFactory {
-    
 
-    private final List<DocumentProcessor> processors;
-    
-    public DocumentProcessorFactory(List<DocumentProcessor> processors) {
-        this.processors = processors;
-    }
-    
+    @Autowired
+    TxtDocumentProcessor processor;
 
-    public DocumentProcessor getProcessor(String contentType) {
-        return processors.stream()
-                .filter(processor -> processor.supports(contentType))
-                .findFirst().get();
+
+    public DocumentProcessor getProcessor() {
+        return processor;
     }
 }

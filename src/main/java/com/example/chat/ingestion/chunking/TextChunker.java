@@ -1,6 +1,6 @@
 package com.example.chat.ingestion.chunking;
 
-import com.example.chat.ingestion.model.ExtractedContent;
+import com.example.chat.ingestion.model.Document;
 import com.example.chat.ingestion.model.TextChunk;
 import java.util.List;
 
@@ -9,9 +9,9 @@ public interface TextChunker {
 
     String getType();
 
-    List<TextChunk> chunk(ExtractedContent content);
+    List<TextChunk> chunk(Document content);
 
-    default boolean supports(ExtractedContent content) {
+    default boolean supports(Document content) {
         return true;
     }
 }

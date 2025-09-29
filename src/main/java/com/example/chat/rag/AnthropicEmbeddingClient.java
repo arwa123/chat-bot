@@ -14,12 +14,9 @@ import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
-import reactor.util.retry.Retry;
 import javax.net.ssl.SSLException;
 import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 
 /**
  * Client for generating embeddings using Anthropic's API
@@ -30,11 +27,7 @@ public class AnthropicEmbeddingClient implements EmbeddingClient {
 
     private static final Logger logger = LoggerFactory.getLogger(AnthropicEmbeddingClient.class);
     private static final String EMBEDDING_ENDPOINT = "/seldon/seldon/bge-m3-79ebf/v2/models/bge-m3-79ebf/infer";
-    private static final int EMBEDDING_DIMENSION = 1024;
     private static final int REQUEST_TIMEOUT_SECONDS = 30;
-    private static final int RETRY_MAX_ATTEMPTS = 2;
-    private static final int RETRY_MIN_BACKOFF_SECONDS = 1;
-
     private final WebClient webClient;
     private final String baseUrl;
 
@@ -80,13 +73,6 @@ public class AnthropicEmbeddingClient implements EmbeddingClient {
 
     @Override
     public List<Double> getEmbeddings(String text) {
-        if (text == null || text.isBlank()) {
-            logger.warn("Empty text provided for embedding");
-            throw new IllegalArgumentException("Text cannot be empty");
-        }
-        
-        logger.debug("Generating embedding for text of length: {}", text.length());
-        
         try {
             EmbeddingRequest request = EmbeddingRequest.forSingleText(text);
             List<List<Double>> embeddings = getEmbeddingsInternal(request);
@@ -103,18 +89,8 @@ public class AnthropicEmbeddingClient implements EmbeddingClient {
     
 
     public List<List<Double>> getEmbeddingsForMultipleTexts(List<String> texts) {
-        if (texts == null || texts.isEmpty()) {
-            logger.warn("Empty text list provided for embeddings");
-            return Collections.emptyList();
-        }
-        
-        logger.debug("Generating embeddings for {} texts", texts.size());
-        
         try {
-            // Create request using factory method
             EmbeddingRequest request = EmbeddingRequest.forMultipleTexts(texts);
-            
-            // Get embeddings
             return getEmbeddingsInternal(request);
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate embeddings for texts", e);
@@ -141,39 +117,13 @@ public class AnthropicEmbeddingClient implements EmbeddingClient {
                             })
                     )
                     .bodyToMono(EmbeddingResponse.class)
-                    .retryWhen(Retry.backoff(RETRY_MAX_ATTEMPTS, Duration.ofSeconds(RETRY_MIN_BACKOFF_SECONDS))
-                            .filter(throwable -> !(throwable instanceof TimeoutException))
-                    )
                     .block();
 
             if (response == null) {
                 logger.error("Null response from embedding API");
                 throw new RuntimeException("Null response received from embedding API");
             }
-            
-            List<List<Double>> embeddings = response.getEmbeddings();
-            if (embeddings == null) {
-                logger.error("No embeddings returned from API");
-                throw new RuntimeException("No embeddings returned from API");
-            }
-            
-            if (embeddings.isEmpty()) {
-                logger.warn("Empty embeddings list returned from API, returning empty list");
-                return Collections.emptyList();
-            }
-            
-            for (List<Double> embedding : embeddings) {
-                if (embedding.size() != EMBEDDING_DIMENSION) {
-                    logger.error("Unexpected embedding dimension: got {}, expected {}", 
-                            embedding.size(), EMBEDDING_DIMENSION);
-                    throw new IllegalStateException(
-                            "Unexpected embedding dimension: got " + embedding.size() + 
-                            ", expected " + EMBEDDING_DIMENSION);
-                }
-            }
-            
-            logger.debug("Successfully generated {} embeddings", embeddings.size());
-            return embeddings;
+            return response.getEmbeddings();
             
         } catch (Exception e) {
             logger.error("Error calling embedding API", e);

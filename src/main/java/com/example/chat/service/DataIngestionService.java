@@ -14,7 +14,6 @@ import com.example.chat.dto.ChatModelDto.DataIngestionRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -44,59 +43,32 @@ public class DataIngestionService {
         this.pipeline = pipeline;
     }
     
-    /**
-     * Process a file upload through the ingestion pipeline
-     * 
-     * @param file The uploaded file
-     * @param metadata Additional metadata for the document
-     * @return Response with operation status and document ID
-     */
-    public DocumentResponse processFile(MultipartFile file, Map<String, Object> metadata) {
-        try {
-            return processFileAsync(file, metadata).join();
-        } catch (Exception e) {
-            Throwable cause = e.getCause() != null ? e.getCause() : e;
-            logger.error("Error processing file: {}", cause.getMessage(), cause);
-            return DocumentResponse.error("Unexpected error: " + cause.getMessage());
-        }
-    }
-    
+
     /**
      * Process a file upload through the ingestion pipeline asynchronously
      * 
      * @param file The uploaded file
      * @param metadata Additional metadata for the document
-     * @return CompletableFuture that will resolve to a response with operation status and document ID
+     * @return DocumentResponse with operation status and document ID
      */
-    public CompletableFuture<DocumentResponse> processFileAsync(MultipartFile file, Map<String, Object> metadata) {
+    public DocumentResponse processFileAsync(MultipartFile file, Map<String, Object> metadata) {
         logger.info("Processing file upload asynchronously: {}", file.getOriginalFilename());
-        
-        return CompletableFuture.supplyAsync(() -> {
             try {
                 String contentType = file.getContentType();
-                DocumentProcessor processor = documentProcessorFactory.getProcessor(contentType);
+                DocumentProcessor processor = documentProcessorFactory.getProcessor();
                 Document document = processor.processFile(file, metadata);
-                List<UUID> chunkIds = pipeline.processDataAsync(document).join();
-                
+                CompletableFuture<List<UUID>> future = pipeline.processDataAsync(document);
+                future.exceptionally(ex -> {
+                    logger.error("Async processing failed for document {}: {}", document.id(), ex.getMessage(), ex);
+                    return null;
+                });
                 return DocumentResponse.success(
                         document.id(),
-                        chunkIds.size(),
-                        "Successfully processed document and created " + chunkIds.size() + " chunks using parallel processing"
+                        "Successfully started processing the document"
                 );
             } catch (Exception e) {
                 throw new CompletionException(e);
             }
-        }).exceptionally(ex -> {
-            Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-            logger.error("Error in async document processing: {}", cause.getMessage(), cause);
-            if (cause instanceof IOException) {
-                return DocumentResponse.error("Error processing file: " + cause.getMessage());
-            } else if (cause instanceof PipelineException) {
-                return DocumentResponse.error("Pipeline error: " + cause.getMessage());
-            } else {
-                return DocumentResponse.error("Unexpected error: " + cause.getMessage());
-            }
-        });
     }
 
 
